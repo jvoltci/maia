@@ -187,9 +187,9 @@
 
         <section id="quickstart">
             <h2>Quickstart</h2>
-            <p>To run the live distributed ledger conflict simulation locally:</p>
-            <pre>PYTHONPATH=. python3 -u examples/01_mesh_simulation.py</pre>
-            <p>Then open the dashboard locally at <code>http://localhost:8000</code> or <code>http://localhost:8001</code> to view real-time state reconciliation.</p>
+            <p>To compile the workspace and run the test suite locally:</p>
+            <pre>cargo check --workspace&#x0A;cargo test --workspace</pre>
+            <p>To view the live WebAssembly-powered dashboard, run a local web server (e.g. <code>python3 -m http.server</code>) in the root and visit <code>http://localhost:8000/web/</code>.</p>
         </section>
 
         <footer>

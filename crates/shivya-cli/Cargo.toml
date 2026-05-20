@@ -1,0 +1,14 @@
+[package]
+name = "shivya-cli"
+version = "0.1.0"
+edition = "2021"
+license = "MIT OR Apache-2.0"
+description = "High-performance native command-line daemon for the Shivya Non-Dual Substrate."
+
+[dependencies]
+shivya = { version = "0.1.0", path = "../../" }
+tokio = { version = "1.0", features = ["full"] }
+clap = { version = "4.0", features = ["derive"] }
+sysinfo = "0.30"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"

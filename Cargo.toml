@@ -17,7 +17,8 @@ members = [
     "crates/telemetry_wasm",
     "crates/shivya-morphic",
     "crates/shivya-onsager",
-    "crates/shivya-turing"
+    "crates/shivya-turing",
+    "crates/shivya-cli"
 ]
 
 [dependencies]

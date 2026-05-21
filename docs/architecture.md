@@ -6,7 +6,12 @@ This document describes the software components, mathematical operators, and arc
 
 ## 1. Workspace Topology
 
-Shivya is a Rust virtual workspace. The core mathematical crates have zero external dependencies; runtime concerns (Tokio, sysinfo, WebSocket, daemonisation) are isolated in the boundary crates.
+Shivya is a Rust virtual workspace organised in two tiers:
+
+1. **Math + simulation tier (Layers 0–4 + `shivya-telemetry`).** Zero external dependencies, stack-allocated where possible, and `wasm32-unknown-unknown`-clean. This is the codepath that runs unchanged inside the browser cockpit shipped under `docs/`.
+2. **Runtime tier (`shivya-p2p`, `shivya-cli`).** Native binaries layered on top of the `tokio` asynchronous runtime, kernel UDP sockets, `sysinfo` host telemetry, and (Unix only) `daemonize`. These crates are *not* WASM-portable and are not intended to be.
+
+Boundary crates isolate runtime concerns (Tokio, sysinfo, WebSocket, daemonisation) so the WASM tier stays free of them.
 
 ```mermaid
 graph TD
@@ -26,7 +31,7 @@ graph TD
 
     L4["Layer 4: shivya-turing (reaction-diffusion)"]:::core
     L3["Layer 3: shivya-onsager (multi-agent thermodynamics)"]:::core
-    L2["Layer 2: shivya-morphic (register VM)"]:::core
+    L2["Layer 2: shivya-morphic (register-IR interpreter + 1+1 mutation hill-climber)"]:::core
     L1["Layer 1: shivya-flux (active inference)"]:::core
     L0["Layer 0: shivya-hodge (DEC + curl projector)"]:::core
 
@@ -55,12 +60,12 @@ graph TD
   - **d₀ (boundary, gradient):** maps vertex potentials → edge flows.
   - **d₁ (boundary, curl):** maps edge flows → triangle circulations, signs `(+v→w, −u→w, +u→v)` per face.
   - **δ₁ (codifferential, divergence):** `d₀ᵀ`.
-- **Conjugate Gradient Solver ([src/solver.rs](../crates/shivya-hodge/src/solver.rs)):** Standard CG recurrence for symmetric positive (semi)definite systems. Tolerance 1e-8, max 1000 iterations.
-- **Reconciler ([src/reconciler.rs](../crates/shivya-hodge/src/reconciler.rs)):** Computes the Hodge decomposition:
+- **Conjugate Gradient Solver ([src/solver.rs](../crates/shivya-hodge/src/solver.rs)):** Standard CG recurrence for symmetric positive (semi)definite systems. Convergence test compares the true residual norm `‖r‖` against the configured tolerance (default `1e-8`); maximum 1000 iterations. Heap-backed `Vec` working set.
+- **Reconciler ([src/reconciler.rs](../crates/shivya-hodge/src/reconciler.rs)):** Implements the **curl projector** against the discrete Hodge decomposition
   $$\Delta S = d_0 \alpha + d_1^T \beta + \gamma$$
-  Isolates the curl `d₁ᵀβ` by solving `L₂ β = d₁ ΔS` (with `L₂ = d₁ d₁ᵀ`) and projects it out:
+  by isolating only the coexact component `d₁ᵀβ`: it solves `L₂ β = d₁ ΔS` (with `L₂ = d₁ d₁ᵀ`) via CG and subtracts the result:
   $$\Delta S_{\text{reconciled}} = \Delta S - d_1^T \beta$$
-  The result is curl-free and identical on all nodes that observe the same complex.
+  The gradient component `d₀α` and harmonic component `γ` are **not** separately extracted — Layer 0 only requires the curl-free projection. The result is curl-free and identical on all nodes that observe the same complex.
 
 ### Layer 1: Active Inference (`crates/shivya-flux`)
 
@@ -68,13 +73,13 @@ graph TD
 - **Variational Free Energy** over observations `s` and belief mean `μ_q`:
   $$F = D_{\text{KL}}(q(\vartheta|\mu_q)\,\|\,p(\vartheta)) + \tfrac{1}{2}\Big( S \ln 2\pi + \ln |\Sigma_s| + (s - G_s\mu_q)^\top \Sigma_s^{-1}(s - G_s\mu_q) + \text{tr}(G_s^\top \Sigma_s^{-1} G_s \Sigma_q)\Big)$$
 - **Expected Free Energy** (policy evaluation): pragmatic = `KL( pred_obs ‖ pref )`, epistemic = `0.5 ln((2πe)^k |Σ_q|)`.
-- **Error model:** matrix inversions go through a stabilised path. On singular input the implementation adds a `RIDGE_EPSILON = 1e-6` diagonal and retries; on second failure it returns the identity matrix (= "no information" prior). Every failure is recordable through `SubstrateError`. No `panic!` on the main path.
+- **Error model:** matrix inversions go through a stabilised path. On singular input the implementation adds a `RIDGE_EPSILON = 1e-6` diagonal and retries; on second failure it returns the identity matrix (= "no information" prior). Every failure is recordable through `SubstrateError`. The Layer-0 sparse-matrix operators (`insert`, `mul_vec`, `mul_mat`, `transpose`, `conjugate_gradient`) and the curl reconciler also return `Result<_, SubstrateError>` — no `panic!`, no `assert_eq!`, no `unwrap` anywhere on the main math path.
 
-### Layer 2: Self-Optimizing Register Core (`crates/shivya-morphic`)
+### Layer 2: Register-IR Interpreter + Expression-Tree Hill-Climber (`crates/shivya-morphic`)
 
-- **vm/compiler + eval ([crates/shivya-morphic/src/vm/](../crates/shivya-morphic/src/vm/)):** A 4-opcode register machine (`Const`, `Var`, `Add`, `Mul`) with a hard 500-instruction budget per evaluation. The compiler walks the expression AST and emits straight-line code; the evaluator executes against a per-step Vec of registers — no heap recursion.
+- **vm/compiler + eval ([crates/shivya-morphic/src/vm/](../crates/shivya-morphic/src/vm/)):** A *deterministic, fixed-budget register-IR interpreter* — small opcode set (`Const`, `Var`, `Add`, `Mul`) with a hard 500-instruction budget per evaluation. The compiler walks the expression AST once and emits straight-line code; the evaluator executes against a per-step register slab. The instruction stream and register slab are heap-backed `Vec`s — the meaningful guarantee is the cycle cap, not stack residency. The running code is **not** mutated mid-execution: the VM is plain, deterministic interpretation. There is no JIT, no self-rewriting bytecode, no runtime patching.
 - **DynamicGibbsAgent ([autotelic.rs](../crates/shivya-morphic/src/autotelic.rs)):** A dynamically-sized variant of the static `GibbsFluxAgent`. Same VFE, EFE, gradient-descent loop, but with `Vec<Vec<f64>>` shapes so the internal dimension can grow at runtime via `expand_state_space()` when the moving-average free energy crosses the novelty threshold `tau_novelty`.
-- **MorphicHotSwapper ([metamorphic.rs](../crates/shivya-morphic/src/metamorphic.rs)):** Genetic-programming hill-climb: mutate the current symbolic update law, evaluate on a small dataset, accept if MSE drops. Honest naming: this is GP with a free-energy proxy, not anything more exotic.
+- **MorphicHotSwapper ([metamorphic.rs](../crates/shivya-morphic/src/metamorphic.rs)):** *Offline* **stochastic 1+1 mutation hill-climber** over expression trees — mutation-only (subtree replacement at p=0.15, otherwise per-node constant jitter / variable toggle / operator swap), no crossover, no population, greedy accept-if-better. Mutates a candidate symbolic update law (the *data*, not the running VM image), evaluates it on a held-out window, and replaces the previous law only if the free-energy proxy drops. The new law is then handed back to the deterministic VM for the next round of interpretation. This is a 1+1 evolutionary strategy on the generative model, not full genetic programming.
 - **Stability helpers ([dyn_mat_inv_stable](../crates/shivya-morphic/src/autotelic.rs)):** Counterpart of the `MatrixMath::inv()` helper in `shivya-flux`. Plain inverse → ridge fallback → identity. Per-thread last-failure record exposed via `last_stabilization_event()`.
 
 ### Layer 3: Onsager Ensemble (`crates/shivya-onsager`)
@@ -108,7 +113,7 @@ graph TD
 
 - **TelemetrySampler ([src/telemetry.rs](../crates/shivya-cli/src/telemetry.rs)):** Wraps `sysinfo`. Samples CPU load, NIC bytes RX/TX delta, memory pressure on a 1 Hz interval.
 - **NativeOrchestrator ([src/orchestrator.rs](../crates/shivya-cli/src/orchestrator.rs)):** Wires telemetry samples to the 5-layer stack, projects K-bucket peers into the Layer-0 simplicial complex, scales the Onsager base coupling by network/memory pressure, and broadcasts `ThermodynamicPush` frames to all discovered peers per step.
-- **WorkloadMeshProxy ([src/bridge.rs](../crates/shivya-cli/src/bridge.rs)):** Application facade. `record_queue_len`/`record_offload` map domain signals to 0-/1-simplex flows. `settle()` runs the curl projector and returns `EdgeRecommendation`s — curl-free recommended offload rates per edge.
+- **WorkloadMeshProxy ([src/bridge.rs](../crates/shivya-cli/src/bridge.rs)):** Application bridge owned by the orchestrator and driven every 1 Hz tick: pulls queue lengths from the Layer-4 activator field and offload rates from the Onsager coupling × belief differential, runs `settle()`, and writes reconciled per-edge rates back into `complex.edge_states` and the Onsager `l_matrix`. `record_queue_len`/`record_offload` map domain signals to 0-/1-simplex flows; `settle()` runs the curl projector and returns `EdgeRecommendation`s. Reachable from outside the daemon via the UDS command protocol (`Q <node> <q>`, `O <src> <dst> <rate>`, `SETTLE`, default `STATUS`) on `/tmp/shivya_cli_<port>.sock`.
 - **WebSocket bridge ([main.rs](../crates/shivya-cli/src/main.rs)):** Listens on `127.0.0.1:9002` under `--visualize`. Uses `tokio::sync::broadcast` so a lagging dashboard client cannot back-pressure the orchestrator's update loop.
 - **Daemonisation:** `fork()` and session-detach via the `daemonize` crate occur **before** the Tokio runtime is constructed — reactor file descriptors live in the detached child.
 
@@ -116,7 +121,7 @@ graph TD
 
 ## 5. Stability and Error Surfaces
 
-Recurring numerical failures bubble up through `shivya_flux::SubstrateError`:
+Recurring numerical failures bubble up through `shivya_hodge::SubstrateError` (re-exported as `shivya_flux::SubstrateError` for backward compatibility):
 
 | Variant | When it fires | What the runtime does |
 |---|---|---|

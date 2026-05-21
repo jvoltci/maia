@@ -34,7 +34,7 @@ When concurrent branches merge, the disagreement appears as non-zero curl: `d₁
 
 $$L_2 \beta = d_1 \Delta S \quad \text{where} \quad L_2 = d_1 d_1^T$$
 
-A stack-allocated Conjugate Gradient solver (`crates/shivya-hodge/src/solver.rs`, tolerance 1e-8) converges on `β`. The curl component is then projected out:
+An in-tree Conjugate Gradient solver (`crates/shivya-hodge/src/solver.rs`, residual-norm tolerance `‖r‖ ≤ 1e-8`, max 1000 iterations; heap-backed `Vec` working set, not stack-resident) converges on `β`. The curl component is then projected out:
 
 $$\Delta S_{\text{reconciled}} = \Delta S - d_1^T \beta$$
 
@@ -50,7 +50,7 @@ The Hodge projector is the floor, not the ceiling. The upper layers are what mak
 
 - **Layer 1 (active inference)** lets each node maintain an explicit posterior over its observations. When telemetry collapses (e.g., singular covariance during sustained colinear load), the math path falls back to ridge regularisation (1e-6) and ultimately identity-matrix inversion. No `panic!` on the main path.
 
-- **Layer 2 (self-optimising register core)** is a real bytecode VM with a 500-cycle budget, plus a generative model that can grow its own latent dimension at runtime. The "metamorphic" component is genetic programming with a free-energy fitness — useful, but labelled honestly.
+- **Layer 2 (register-IR interpreter + expression-tree hill-climber)** is a *deterministic, fixed-budget register-IR interpreter* with a 500-cycle ceiling (instruction stream and registers are heap-backed `Vec`s — the meaningful guarantee is the cycle cap, not stack residency), plus a generative model that can grow its own latent dimension at runtime. The VM itself never rewrites the program it is executing; a separate offline **stochastic 1+1 mutation hill-climber** proposes new symbolic update laws (mutation-only, no crossover or population, greedy accept) and only swaps them in when the free-energy proxy drops. Honestly labelled: this is a 1+1 evolutionary strategy on the generative model, not full genetic programming.
 
 - **Layer 3 (Onsager ensemble)** couples nodes with a symmetric flow matrix `L_ij = L_ji` and computes Harsanyi dividends over local coalitions (Möbius recursion over neighbourhood subsets). The collective free-energy functional rewards synergistic configurations.
 

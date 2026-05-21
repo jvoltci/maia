@@ -10,6 +10,8 @@ use shivya_p2p::routing::{NodeId, KBucketTable};
 use shivya_p2p::transport::UdpTransport;
 use shivya_p2p::protocol::{Frame, FramePayload};
 
+use crate::bridge::{BridgeError, EdgeRecommendation, WorkloadMeshProxy, WorkloadSnapshot};
+
 fn lead_zeros_bytes(dist: &[u8; 20]) -> usize {
     let mut count = 0;
     for &byte in dist {
@@ -45,6 +47,15 @@ pub struct SystemStatus {
     pub nodes: Vec<NodeStatus>,
     pub step_count: usize,
     pub edges: Vec<(usize, usize)>,
+    /// L2 norm of the curl bled off the workload-bridge edge flux on the
+    /// most recent settle(). 0.0 when the input was already curl-free.
+    pub workload_curl_norm: f64,
+    /// Curl-free per-edge offload-rate recommendations from the
+    /// `WorkloadMeshProxy` driving the daemon's 1 Hz settle loop.
+    pub workload_recommendations: Vec<EdgeRecommendation>,
+    /// Full bridge snapshot (vertex masses + edge reported/recommended
+    /// rates) for the most recent tick.
+    pub workload_snapshot: WorkloadSnapshot,
 }
 
 pub struct NativeOrchestrator {
@@ -57,11 +68,18 @@ pub struct NativeOrchestrator {
     pub apoptosis: ApoptosisEngine,
     pub step_count: usize,
     pub last_status: SystemStatus,
-    
+
     // Phase 11 P2P Fields
     pub self_id: NodeId,
     pub p2p_table: Option<Arc<Mutex<KBucketTable>>>,
     pub p2p_transport: Option<Arc<UdpTransport>>,
+
+    /// Application-facing bridge: maps queue/offload signals to the local
+    /// simplicial complex, runs the curl projector, returns reconciled
+    /// per-edge rates. Driven from `step_with_telemetry` every tick and
+    /// reachable from outside the daemon via the UDS command protocol.
+    pub workload_bridge: WorkloadMeshProxy,
+    pub last_recommendations: Vec<EdgeRecommendation>,
 }
 
 impl NativeOrchestrator {
@@ -141,9 +159,27 @@ impl NativeOrchestrator {
             nodes: Vec::new(),
             step_count: 0,
             edges: vec![(0, 1), (1, 2), (0, 2)],
+            workload_curl_norm: 0.0,
+            workload_recommendations: Vec::new(),
+            workload_snapshot: WorkloadSnapshot::default(),
         };
 
         let self_id = NodeId::random();
+
+        // Application-facing bridge mirrors the orchestrator's bootstrap
+        // triangle (Node0-Node1-Node2). Inbound UDS clients can mutate this
+        // proxy with queue/offload signals; the 1 Hz loop and the UDS
+        // SETTLE command both run the curl projector against it and feed
+        // the reconciled rates back into the Onsager coupling matrix.
+        let workload_bridge = WorkloadMeshProxy::new(
+            vec!["Node0".into(), "Node1".into(), "Node2".into()],
+            vec![
+                ("Node0".into(), "Node1".into()),
+                ("Node1".into(), "Node2".into()),
+                ("Node0".into(), "Node2".into()),
+            ],
+        )
+        .expect("workload bridge bootstrap (default 3-node mesh)");
 
         Self {
             max_nodes,
@@ -158,7 +194,57 @@ impl NativeOrchestrator {
             self_id,
             p2p_table: None,
             p2p_transport: None,
+            workload_bridge,
+            last_recommendations: Vec::new(),
         }
+    }
+
+    /// External recorder for application queue lengths (entry point used
+    /// by the UDS `Q <node> <q>` command).
+    pub fn record_workload_queue(&mut self, node: &str, q: usize) -> Result<(), BridgeError> {
+        self.workload_bridge.record_queue_len(node, q)
+    }
+
+    /// External recorder for application offload rates (entry point used
+    /// by the UDS `O <src> <dst> <rate>` command).
+    pub fn record_workload_offload(
+        &mut self,
+        src: &str,
+        dst: &str,
+        rate: f64,
+    ) -> Result<(), BridgeError> {
+        self.workload_bridge.record_offload(src, dst, rate)
+    }
+
+    /// Runs the curl projector on the bridge's current state and applies
+    /// the reconciled rates back into the active mesh: writes the per-edge
+    /// recommendation into `complex.edge_states`, biases the Onsager
+    /// `l_matrix` on that pair, and caches the recommendation set for the
+    /// next status JSON dump.
+    pub fn settle_and_apply(&mut self) -> Vec<EdgeRecommendation> {
+        let recs = self.workload_bridge.settle();
+        for rec in &recs {
+            let u = rec.from.strip_prefix("Node").and_then(|s| s.parse::<usize>().ok());
+            let v = rec.to.strip_prefix("Node").and_then(|s| s.parse::<usize>().ok());
+            if let (Some(u), Some(v)) = (u, v) {
+                if let Some((idx, sign)) = self.complex.find_edge_index(u, v) {
+                    self.complex.edge_states[idx] = sign * rec.recommended_rate;
+                }
+                if u < self.max_nodes && v < self.max_nodes {
+                    let scale = 1.0 + rec.recommended_rate.abs().min(2.0);
+                    self.ensemble.regulator.l_matrix[u][v] *= scale;
+                    self.ensemble.regulator.l_matrix[v][u] *= scale;
+                }
+            }
+        }
+        self.last_recommendations = recs.clone();
+        recs
+    }
+
+    /// Read-only view of the cached recommendations from the most recent
+    /// `settle_and_apply()`. Cheap enough to call per UDS connection.
+    pub fn workload_recommendations(&self) -> &[EdgeRecommendation] {
+        &self.last_recommendations
     }
 
     pub fn set_p2p(
@@ -251,6 +337,47 @@ impl NativeOrchestrator {
             .map(|(&r, &d)| (r - d).powi(2))
             .sum::<f64>().sqrt();
 
+        // 4b. Drive the application-facing workload bridge from the
+        // substrate's current state: queue length is read off the Turing
+        // activator field (saturated activator ⇒ heavier in-flight work);
+        // offload rate is the Onsager coupling × belief differential, the
+        // same signal the ensemble itself uses to migrate parameters. Then
+        // settle() runs the curl projector on the bridge's edge flux and
+        // settle_and_apply() writes the reconciled per-edge rates back
+        // into `complex.edge_states` and biases the Onsager L matrix.
+        for i in 0..self.workload_bridge.node_names().len() {
+            if i < self.turing.u.len() && self.turing.active[i] {
+                let q = (self.turing.u[i].max(0.0)
+                    * self.workload_bridge.queue_scale)
+                    .round() as usize;
+                let label = format!("Node{}", i);
+                let _ = self.workload_bridge.record_queue_len(&label, q);
+            }
+        }
+        let edge_labels = self.workload_bridge.edge_labels().to_vec();
+        for (u_label, v_label) in &edge_labels {
+            let u = u_label.strip_prefix("Node").and_then(|s| s.parse::<usize>().ok());
+            let v = v_label.strip_prefix("Node").and_then(|s| s.parse::<usize>().ok());
+            if let (Some(u), Some(v)) = (u, v) {
+                if u < self.max_nodes && v < self.max_nodes {
+                    let coupling = self.ensemble.regulator.l_matrix[u][v];
+                    let belief_diff = if !self.ensemble.agents[u].mu_q.is_empty()
+                        && !self.ensemble.agents[v].mu_q.is_empty()
+                    {
+                        self.ensemble.agents[u].mu_q[0] - self.ensemble.agents[v].mu_q[0]
+                    } else {
+                        0.0
+                    };
+                    let _ = self
+                        .workload_bridge
+                        .record_offload(u_label, v_label, coupling * belief_diff);
+                }
+            }
+        }
+        let workload_recs = self.settle_and_apply();
+        let workload_curl_norm = self.workload_bridge.last_curl_norm();
+        let workload_snapshot = self.workload_bridge.snapshot();
+
         // 5. Gierer-Meinhardt reaction diffusion step (Layer 4)
         self.turing.step_rk4(0.05);
 
@@ -320,6 +447,9 @@ impl NativeOrchestrator {
             nodes: nodes_status,
             step_count: self.step_count,
             edges,
+            workload_curl_norm,
+            workload_recommendations: workload_recs,
+            workload_snapshot,
         };
 
         // 9. Broadcast thermodynamic state to all discovered peers

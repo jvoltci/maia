@@ -11,10 +11,16 @@
 //!      a final PING round trips through every transport.
 //!   2. **Split-brain recovery.** After the chaos ends, every node's
 //!      Kademlia table reconverges to >= N/2 known peers.
-//!   3. **Free-energy minimisation under chaos.** Average collective F
-//!      over the last 10 ensemble steps is strictly less than the average
-//!      over the first 10 steps, proving the substrate keeps converging
-//!      despite the disturbance.
+//!   3. **Free-energy stabilisation across the recovery cycle.** Average
+//!      collective F over the trailing 10 ensemble steps (collected during
+//!      the COOLDOWN phase, *after* every block has been cleared and a
+//!      fresh full-mesh discovery has driven the K-buckets back to N-1
+//!      peers) is strictly less than the average over the leading 10
+//!      steps (the WARMUP phase, before any chaos). The assertion proves
+//!      the substrate stabilises globally immediately following active
+//!      partition recovery — it does **not** assert step-by-step
+//!      monotonic descent during the chaos window itself, where F may
+//!      transiently rise as observations drift behind partition cuts.
 //!
 //! Determinism: a seeded xorshift PRNG drives the chaos schedule, so the
 //! test is reproducible. The seed is hard-coded at the top of the test.
@@ -447,15 +453,19 @@ async fn seven_node_chaos_stable_and_minimizes_free_energy() {
         );
     }
 
-    // (4) Free-energy minimisation under chaos. Compare the trailing
-    //     average against the leading average. A non-degenerate substrate
-    //     under stable observations should pull F down even with packet
-    //     loss and isolation events in flight.
+    // (4) Free-energy stabilisation across the chaos→recovery cycle.
+    //     The trailing average is sampled from the COOLDOWN phase, after
+    //     every partition has been cleared and the K-bucket tables have
+    //     been driven back to N-1 visibility by a fresh full-mesh
+    //     discovery round. The leading average is the WARMUP phase, before
+    //     any chaos. A non-degenerate substrate should pull F below its
+    //     pre-chaos baseline immediately following recovery, even though
+    //     F may have transiently risen *during* the chaos window itself.
     let lead_avg: f64 = f_history[..10].iter().sum::<f64>() / 10.0;
     let tail_avg: f64 = f_history[f_history.len() - 10..].iter().sum::<f64>() / 10.0;
     assert!(
         tail_avg < lead_avg,
-        "collective F failed to minimise under chaos: lead avg = {lead_avg:.6}, tail avg = {tail_avg:.6}"
+        "collective F failed to stabilise after chaos→recovery: pre-chaos lead avg = {lead_avg:.6}, post-recovery tail avg = {tail_avg:.6}"
     );
 
     // (5) The chaos actually happened. Sanity check we exercised the

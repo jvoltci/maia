@@ -1,3 +1,4 @@
+use crate::error::SubstrateError;
 use crate::operators::SparseMatrix;
 
 #[derive(Clone, Debug)]
@@ -37,12 +38,12 @@ impl SimplicialStateComplex {
     pub fn add_edge(&mut self, u_label: &str, v_label: &str, initial_state: f64) {
         let u = self.add_vertex(u_label, 0.0);
         let v = self.add_vertex(v_label, 0.0);
-        
+
         // Avoid duplicate edges
         if self.edges.iter().any(|&(a, b)| (a == u && b == v) || (a == v && b == u)) {
             return;
         }
-        
+
         self.edges.push((u, v));
         self.edge_states.push(initial_state);
         self.rebuild_triangles();
@@ -81,29 +82,29 @@ impl SimplicialStateComplex {
         None
     }
 
-    pub fn d0(&self) -> SparseMatrix {
+    pub fn d0(&self) -> Result<SparseMatrix, SubstrateError> {
         let mut d = SparseMatrix::new(self.edges.len(), self.vertices.len());
         for (i, &(u, v)) in self.edges.iter().enumerate() {
-            d.insert(i, u, -1.0);
-            d.insert(i, v, 1.0);
+            d.insert(i, u, -1.0)?;
+            d.insert(i, v, 1.0)?;
         }
-        d
+        Ok(d)
     }
 
-    pub fn d1(&self) -> SparseMatrix {
+    pub fn d1(&self) -> Result<SparseMatrix, SubstrateError> {
         let mut d = SparseMatrix::new(self.triangles.len(), self.edges.len());
         for (j, &(u, v, w)) in self.triangles.iter().enumerate() {
             // boundary of [u, v, w] is [v, w] - [u, w] + [u, v]
             if let Some((e_vw, sign_vw)) = self.find_edge_index(v, w) {
-                d.insert(j, e_vw, sign_vw);
+                d.insert(j, e_vw, sign_vw)?;
             }
             if let Some((e_uw, sign_uw)) = self.find_edge_index(u, w) {
-                d.insert(j, e_uw, -sign_uw);
+                d.insert(j, e_uw, -sign_uw)?;
             }
             if let Some((e_uv, sign_uv)) = self.find_edge_index(u, v) {
-                d.insert(j, e_uv, sign_uv);
+                d.insert(j, e_uv, sign_uv)?;
             }
         }
-        d
+        Ok(d)
     }
 }

@@ -168,11 +168,13 @@ async fn five_node_partition_heals_via_hodge_projection() {
     let reconciled = reconcile_state_delta(&complex_pre, &combined);
 
     // 8. The reconciled flow must be curl-free: d1 * reconciled ≈ 0.
-    let d1 = complex_pre.d1();
-    let curl_after = d1.mul_vec(&reconciled);
+    //    Tolerance matches the CG residual-norm bound (1e-8) with one decade
+    //    of floating-point headroom for the subsequent d1·reconciled product.
+    let d1 = complex_pre.d1().expect("bowtie d1 is well-defined");
+    let curl_after = d1.mul_vec(&reconciled).expect("dims match by construction");
     for (i, &val) in curl_after.iter().enumerate() {
         assert!(
-            val.abs() < 1e-6,
+            val.abs() < 1e-7,
             "triangle {i} still has curl {val} after Hodge projection",
         );
     }
@@ -202,7 +204,7 @@ async fn five_node_partition_heals_via_hodge_projection() {
         .sum::<f64>()
         .sqrt();
     assert!(
-        drift < 1e-6,
+        drift < 1e-7,
         "Hodge projector is not idempotent (drift={drift})",
     );
 }

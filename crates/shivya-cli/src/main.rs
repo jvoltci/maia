@@ -1,4 +1,3 @@
-#[allow(dead_code)] // public API exposed to embedders even though main.rs doesn't drive it directly
 mod bridge;
 mod telemetry;
 mod orchestrator;
@@ -8,7 +7,7 @@ use std::sync::Arc;
 use tokio::sync::Mutex;
 use std::path::Path;
 use tokio::net::UnixListener;
-use tokio::io::{AsyncReadExt, AsyncWriteExt};
+use tokio::io::{AsyncBufReadExt, AsyncReadExt, AsyncWriteExt, BufReader};
 use telemetry::TelemetrySampler;
 use orchestrator::NativeOrchestrator;
 use std::net::SocketAddr;
@@ -254,11 +253,31 @@ async fn run_start(
     let orchestrator_uds = Arc::clone(&orchestrator);
     tokio::spawn(async move {
         while let Ok((mut stream, _)) = listener.accept().await {
-            let response = {
-                let orch = orchestrator_uds.lock().await;
-                orch.get_status_json()
-            };
-            let _ = stream.write_all(response.as_bytes()).await;
+            let orch_handle = Arc::clone(&orchestrator_uds);
+            tokio::spawn(async move {
+                // Read a single command line, or fall back to STATUS if the
+                // client sent nothing (preserves the legacy read-only
+                // `shivya-cli status` semantics).
+                let mut line = String::new();
+                let read_result = {
+                    let mut buf_reader = BufReader::new(&mut stream);
+                    tokio::time::timeout(
+                        std::time::Duration::from_millis(50),
+                        buf_reader.read_line(&mut line),
+                    )
+                    .await
+                };
+                let cmd = match read_result {
+                    Ok(Ok(_)) => line.trim().to_string(),
+                    _ => String::new(),
+                };
+
+                let response = {
+                    let mut orch = orch_handle.lock().await;
+                    dispatch_uds_command(&mut orch, &cmd)
+                };
+                let _ = stream.write_all(response.as_bytes()).await;
+            });
         }
     });
 
@@ -273,6 +292,41 @@ async fn run_start(
     Ok(())
 }
 
+/// Dispatch a single UDS request line to the orchestrator. Empty input
+/// degrades to a `STATUS` dump, preserving the legacy read-only protocol.
+fn dispatch_uds_command(orch: &mut NativeOrchestrator, line: &str) -> String {
+    let trimmed = line.trim();
+    let mut parts = trimmed.split_whitespace();
+    let cmd = parts.next().unwrap_or("").to_ascii_uppercase();
+    match cmd.as_str() {
+        "" | "STATUS" => orch.get_status_json(),
+        "Q" => {
+            let node = parts.next().unwrap_or("");
+            let q = parts.next().and_then(|s| s.parse::<usize>().ok()).unwrap_or(0);
+            match orch.record_workload_queue(node, q) {
+                Ok(_) => serde_json::to_string_pretty(orch.workload_recommendations())
+                    .unwrap_or_default(),
+                Err(e) => format!("{{\"error\":\"{}\"}}", e),
+            }
+        }
+        "O" => {
+            let src = parts.next().unwrap_or("");
+            let dst = parts.next().unwrap_or("");
+            let rate = parts.next().and_then(|s| s.parse::<f64>().ok()).unwrap_or(0.0);
+            match orch.record_workload_offload(src, dst, rate) {
+                Ok(_) => serde_json::to_string_pretty(orch.workload_recommendations())
+                    .unwrap_or_default(),
+                Err(e) => format!("{{\"error\":\"{}\"}}", e),
+            }
+        }
+        "SETTLE" => {
+            let recs = orch.settle_and_apply();
+            serde_json::to_string_pretty(&recs).unwrap_or_default()
+        }
+        other => format!("{{\"error\":\"unknown command `{}`\"}}", other),
+    }
+}
+
 async fn run_status(port: u16) -> Result<(), Box<dyn std::error::Error>> {
     let socket_path = get_socket_path(port);
     if !Path::new(&socket_path).exists() {
@@ -281,6 +335,9 @@ async fn run_status(port: u16) -> Result<(), Box<dyn std::error::Error>> {
     }
 
     let mut stream = tokio::net::UnixStream::connect(&socket_path).await?;
+    // Send an explicit STATUS request line so the daemon's new UDS
+    // dispatcher routes us to the status JSON.
+    stream.write_all(b"STATUS\n").await?;
     let mut response = Vec::new();
     stream.read_to_end(&mut response).await?;
 

@@ -19,6 +19,7 @@
 //! panic; the underlying math path is already ridge-stabilised in
 //! `shivya-flux`/`shivya-morphic`.
 
+use serde::{Deserialize, Serialize};
 use shivya::hodge::complex::SimplicialStateComplex;
 use shivya::hodge::reconciler::reconcile_state_delta;
 
@@ -43,7 +44,7 @@ impl std::fmt::Display for BridgeError {
 
 impl std::error::Error for BridgeError {}
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct EdgeRecommendation {
     pub from: String,
     pub to: String,
@@ -52,7 +53,7 @@ pub struct EdgeRecommendation {
     pub recommended_rate: f64,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct NodeStat {
     pub name: String,
     pub queue_len: usize,
@@ -60,7 +61,7 @@ pub struct NodeStat {
     pub mass: f64,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EdgeStat {
     pub from: String,
     pub to: String,
@@ -68,13 +69,23 @@ pub struct EdgeStat {
     pub recommended_rate: f64,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct WorkloadSnapshot {
     pub nodes: Vec<NodeStat>,
     pub edges: Vec<EdgeStat>,
     /// L2 norm of (reported - recommended) flux from the last `settle()`.
     /// Reports how much rotational disagreement the substrate had to absorb.
     pub last_curl_norm: f64,
+}
+
+impl Default for WorkloadSnapshot {
+    fn default() -> Self {
+        Self {
+            nodes: Vec::new(),
+            edges: Vec::new(),
+            last_curl_norm: 0.0,
+        }
+    }
 }
 
 /// Idiomatic facade over the simplicial substrate. Holds an internal
@@ -136,16 +147,6 @@ impl WorkloadMeshProxy {
         })
     }
 
-    /// Sets a custom queue-to-mass scale. Default is 32.0 (a queue of length
-    /// 32 maps to mass 2.0, doubling the empty-node mass of 1.0).
-    pub fn set_queue_scale(&mut self, scale: f64) {
-        self.queue_scale = scale.max(1e-6);
-        // Re-project existing queue lengths through the new scale.
-        for (i, &q) in self.queue_lens.clone().iter().enumerate() {
-            self.complex.vertex_states[i] = 1.0 + q as f64 / self.queue_scale;
-        }
-    }
-
     /// Records the current incoming request queue length (or any non-negative
     /// integer "amount of pending work") at `node`. Maps to the 0-simplex
     /// mass on that vertex.
@@ -158,12 +159,6 @@ impl WorkloadMeshProxy {
         self.queue_lens[idx] = q;
         self.complex.vertex_states[idx] = 1.0 + q as f64 / self.queue_scale;
         Ok(())
-    }
-
-    /// Convenience alias for "vector array length" or "in-flight job count".
-    /// Same semantics as `record_queue_len`.
-    pub fn record_vector_load(&mut self, node: &str, items: usize) -> Result<(), BridgeError> {
-        self.record_queue_len(node, items)
     }
 
     /// Reports the current offload rate (requests/sec, items/sec, watts —

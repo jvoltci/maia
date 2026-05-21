@@ -225,6 +225,41 @@
             white-space: pre-wrap;
             border: 1px solid #1E293B;
         }
+
+        .svg-container svg,
+        .svg-container canvas {
+            max-width: 100%;
+            height: auto;
+        }
+
+        @media (max-width: 768px) {
+            body { padding: 1.25rem; }
+            .header { margin-bottom: 1.5rem; padding-bottom: 1rem; }
+            .header h1 { font-size: 1.6rem; line-height: 1.2; word-wrap: break-word; }
+            .header p { font-size: 0.95rem; }
+            .dashboard-grid {
+                grid-template-columns: 1fr;
+                gap: 1.25rem;
+            }
+            .card { padding: 1.25rem; margin-bottom: 1.25rem; }
+            .card h2 { font-size: 1.05rem; flex-wrap: wrap; gap: 0.5rem; }
+            .stats-grid {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 0.75rem;
+            }
+            .stat-value { font-size: 1.2rem; }
+            .control-group { flex-direction: column; gap: 0.5rem; }
+            .console { font-size: 0.75rem; height: 180px; padding: 0.875rem; }
+            .node-code { font-size: 0.7rem; word-break: break-word; }
+        }
+
+        @media (max-width: 480px) {
+            body { padding: 0.875rem; }
+            .header h1 { font-size: 1.35rem; }
+            .stats-grid { grid-template-columns: 1fr; }
+            .card { padding: 1rem; border-radius: 10px; }
+            .svg-container { padding: 0.5rem; }
+        }
     </style>
 </head>
 <body>

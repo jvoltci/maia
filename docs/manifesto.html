@@ -74,6 +74,25 @@
             font-size: 0.85rem;
             color: var(--text-secondary);
         }
+
+        p, li, blockquote { word-wrap: break-word; overflow-wrap: break-word; }
+
+        @media (max-width: 768px) {
+            body { padding: 1rem; }
+            .container { padding: 1.5rem; border-radius: 12px; }
+            h1 { font-size: 1.7rem; line-height: 1.2; }
+            h2 { font-size: 1.2rem; margin-top: 1.5rem; }
+            p, li { font-size: 0.95rem; }
+            ul { margin-left: 1.25rem; }
+            blockquote { padding-left: 0.75rem; margin: 1rem 0; }
+        }
+
+        @media (max-width: 480px) {
+            body { padding: 0.625rem; }
+            .container { padding: 1rem; border-radius: 8px; }
+            h1 { font-size: 1.4rem; }
+            h2 { font-size: 1.1rem; }
+        }
     </style>
 </head>
 <body>

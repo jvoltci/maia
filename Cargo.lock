@@ -886,6 +886,7 @@ dependencies = [
  "shivya-hodge",
  "shivya-morphic",
  "shivya-onsager",
+ "shivya-turing",
  "wasm-bindgen",
 ]
 

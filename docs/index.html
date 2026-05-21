@@ -3,21 +3,29 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SHIVYA: The Non-Dual Substrate</title>
+    <title>SHIVYA: The Non-Dual Substrate | Interactive Observability Dashboard</title>
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Outfit:wght@500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600&family=Inter:wght@300;400;500;600&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     
     <style>
         :root {
-            --bg-color: #F9FAFB;
-            --card-bg: #FFFFFF;
-            --text-primary: #111827;
-            --text-secondary: #4B5563;
-            --border-color: #E5E7EB;
-            --accent-color: #4F46E5;
-            --success-color: #10B981;
+            --bg-dark: #070B13;
+            --bg-card: rgba(13, 20, 35, 0.7);
+            --bg-hover: rgba(26, 38, 64, 0.9);
+            --text-primary: #F3F4F6;
+            --text-muted: #9CA3AF;
+            
+            /* Neon color system matching the 5 layers */
+            --layer0-indigo: #818CF8; /* Hodge topological fabric */
+            --layer1-teal: #2DD4BF;   /* Predictive active inference */
+            --layer2-rose: #FB7185;   /* Morphic VM Hot-Swapping */
+            --layer3-purple: #C084FC; /* Onsager collective ensemble */
+            --layer4-amber: #FBBF24;  /* Turing morphogenesis */
+            
+            --border-glow: rgba(129, 140, 248, 0.15);
+            --border-solid: rgba(255, 255, 255, 0.07);
         }
 
         * {
@@ -27,179 +35,1792 @@
         }
 
         body {
-            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-            background-color: var(--bg-color);
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-dark);
             color: var(--text-primary);
-            line-height: 1.6;
-            padding: 2rem;
+            min-height: 100vh;
+            overflow-x: hidden;
+            display: flex;
+            flex-direction: column;
+            line-height: 1.5;
+            background-image: 
+                radial-gradient(at 0% 0%, rgba(129, 140, 248, 0.08) 0px, transparent 50%),
+                radial-gradient(at 100% 100%, rgba(45, 212, 191, 0.06) 0px, transparent 50%);
         }
 
-        .container {
-            max-width: 800px;
-            margin: 0 auto;
-            background: var(--card-bg);
-            border: 1px solid var(--border-color);
-            border-radius: 16px;
-            padding: 3rem;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+        /* Scrollbars */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: rgba(7, 11, 19, 0.5);
+        }
+        ::-webkit-scrollbar-thumb {
+            background: rgba(129, 140, 248, 0.3);
+            border-radius: 3px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(129, 140, 248, 0.5);
         }
 
+        /* Glassmorphism utility */
+        .glass-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-solid);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border-radius: 14px;
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+            transition: border-color 0.3s ease, box-shadow 0.3s ease;
+        }
+        .glass-card:hover {
+            border-color: rgba(129, 140, 248, 0.25);
+            box-shadow: 0 8px 32px 0 rgba(129, 140, 248, 0.05);
+        }
+
+        /* Header layout */
         header {
-            text-align: center;
-            margin-bottom: 2.5rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1.25rem 2rem;
+            border-bottom: 1px solid var(--border-solid);
+            background: rgba(7, 11, 19, 0.8);
+            backdrop-filter: blur(12px);
+            position: sticky;
+            top: 0;
+            z-index: 100;
         }
 
-        h1 {
+        .logo-section {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .logo-section h1 {
             font-family: 'Outfit', sans-serif;
-            font-size: 2.5rem;
-            font-weight: 700;
-            color: var(--text-primary);
-            letter-spacing: -0.03em;
-            margin-bottom: 0.5rem;
+            font-size: 1.8rem;
+            font-weight: 800;
+            letter-spacing: -0.04em;
+            background: linear-gradient(135deg, #FFF 30%, var(--layer0-indigo) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
         }
 
-        .subtitle {
+        .logo-section span.badge {
+            font-size: 0.75rem;
+            font-weight: 600;
+            padding: 0.2rem 0.6rem;
+            border-radius: 9999px;
+            background: rgba(129, 140, 248, 0.1);
+            border: 1px solid rgba(129, 140, 248, 0.2);
+            color: var(--layer0-indigo);
+            letter-spacing: 0.05em;
+        }
+
+        /* Navigation Tabs */
+        nav {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .tab-btn {
+            background: transparent;
+            border: none;
+            color: var(--text-muted);
+            padding: 0.6rem 1.2rem;
+            border-radius: 8px;
+            font-family: 'Outfit', sans-serif;
+            font-weight: 500;
+            font-size: 0.95rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .tab-btn:hover {
+            color: var(--text-primary);
+            background: rgba(255, 255, 255, 0.03);
+        }
+
+        .tab-btn.active {
+            color: #FFFFFF;
+            background: rgba(129, 140, 248, 0.15);
+            border: 1px solid rgba(129, 140, 248, 0.3);
+            text-shadow: 0 0 10px rgba(129, 140, 248, 0.4);
+        }
+
+        .status-indicator {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.8rem;
+            font-weight: 600;
+            letter-spacing: 0.05em;
+            color: var(--layer1-teal);
+            background: rgba(45, 212, 191, 0.08);
+            border: 1px solid rgba(45, 212, 191, 0.2);
+            padding: 0.4rem 0.8rem;
+            border-radius: 6px;
+            text-transform: uppercase;
+        }
+
+        .pulse-dot {
+            width: 8px;
+            height: 8px;
+            background-color: var(--layer1-teal);
+            border-radius: 50%;
+            animation: beacon-pulse 1.8s infinite alternate;
+        }
+
+        @keyframes beacon-pulse {
+            0% { transform: scale(0.9); opacity: 0.4; box-shadow: 0 0 0 0 rgba(45, 212, 191, 0.4); }
+            100% { transform: scale(1.15); opacity: 1; box-shadow: 0 0 12px 4px rgba(45, 212, 191, 0.6); }
+        }
+
+        /* Core Workspace Area */
+        main {
+            flex: 1;
+            padding: 1.5rem 2rem;
+            max-width: 1600px;
+            margin: 0 auto;
+            width: 100%;
+        }
+
+        .view-content {
+            display: none;
+        }
+        .view-content.active {
+            display: block;
+        }
+
+        /* Simulation Layout Grid */
+        .simulation-grid {
+            display: grid;
+            grid-template-columns: 1.25fr 1fr;
+            gap: 1.5rem;
+            align-items: start;
+        }
+
+        @media (max-width: 1200px) {
+            .simulation-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* Canvas Wrapper styling */
+        .workspace-panel {
+            padding: 1.25rem;
+            position: relative;
+        }
+
+        .panel-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+            border-bottom: 1px solid var(--border-solid);
+            padding-bottom: 0.75rem;
+        }
+
+        .panel-header h2 {
+            font-family: 'Outfit', sans-serif;
             font-size: 1.15rem;
-            color: var(--text-secondary);
+            font-weight: 600;
+            letter-spacing: -0.01em;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .canvas-container {
+            width: 100%;
+            background: #090E17;
+            border-radius: 8px;
+            overflow: hidden;
+            border: 1px solid rgba(255, 255, 255, 0.04);
+            position: relative;
+            aspect-ratio: 4/3;
+        }
+
+        canvas#physics-canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+            cursor: grab;
+        }
+        canvas#physics-canvas:active {
+            cursor: grabbing;
+        }
+
+        .canvas-instruction {
+            position: absolute;
+            bottom: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(7, 11, 19, 0.75);
+            padding: 0.3rem 0.8rem;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            pointer-events: none;
+            border: 1px solid var(--border-solid);
+        }
+
+        /* Control widgets */
+        .control-shelf {
+            margin-top: 1rem;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+        }
+
+        @media (max-width: 600px) {
+            .control-shelf {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .control-card {
+            padding: 1.25rem;
+        }
+
+        .button-bar {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .btn {
+            flex: 1;
+            padding: 0.65rem 1rem;
+            border-radius: 6px;
+            font-family: 'Outfit', sans-serif;
+            font-weight: 600;
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: all 0.15s ease;
+            border: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.4rem;
+        }
+
+        .btn-indigo {
+            background-color: var(--layer0-indigo);
+            color: #FFFFFF;
+        }
+        .btn-indigo:hover {
+            background-color: #6366F1;
+            box-shadow: 0 0 12px rgba(99, 102, 241, 0.4);
+        }
+
+        .btn-dark {
+            background-color: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--border-solid);
+            color: var(--text-primary);
+        }
+        .btn-dark:hover {
+            background-color: rgba(255, 255, 255, 0.08);
+            border-color: rgba(255, 255, 255, 0.15);
+        }
+
+        .btn-rose-outline {
+            background-color: transparent;
+            border: 1px solid rgba(251, 113, 133, 0.3);
+            color: var(--layer2-rose);
+        }
+        .btn-rose-outline:hover {
+            background-color: rgba(251, 113, 133, 0.1);
+            border-color: var(--layer2-rose);
+        }
+
+        /* Slider styles */
+        .slider-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+
+        .slider-container {
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
+        }
+
+        .slider-meta {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.75rem;
+            color: var(--text-muted);
             font-weight: 500;
         }
 
-        .banner-container {
+        .slider-meta span.val {
+            color: var(--layer1-teal);
+            font-family: 'Fira Code', monospace;
+            font-weight: 600;
+        }
+
+        input[type="range"] {
+            -webkit-appearance: none;
             width: 100%;
-            margin: 2rem 0;
-            border-radius: 12px;
-            overflow: hidden;
-            border: 1px solid var(--border-color);
-            background: #F3F4F6;
+            height: 4px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 2px;
+            outline: none;
         }
 
-        .banner-container img {
-            width: 100%;
-            height: auto;
-            display: block;
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: var(--layer0-indigo);
+            cursor: pointer;
+            box-shadow: 0 0 6px rgba(129, 140, 248, 0.8);
+            transition: transform 0.1s;
         }
 
-        section {
-            margin-bottom: 2.5rem;
+        input[type="range"]::-webkit-slider-thumb:hover {
+            transform: scale(1.2);
         }
 
-        h2 {
-            font-family: 'Outfit', sans-serif;
-            font-size: 1.5rem;
-            color: var(--text-primary);
-            margin-bottom: 1rem;
-            border-bottom: 1px solid var(--border-color);
-            padding-bottom: 0.5rem;
-        }
-
-        p {
-            margin-bottom: 1.25rem;
-            color: var(--text-secondary);
-        }
-
-        .links-grid {
+        /* Observability Stats Shelf */
+        .metrics-grid {
             display: grid;
-            grid-template-columns: repeat(3, 1fr);
+            grid-template-columns: repeat(4, 1fr);
             gap: 1rem;
-            margin-top: 1rem;
+            margin-bottom: 1.5rem;
         }
 
-        .link-card {
-            display: block;
-            text-decoration: none;
+        @media (max-width: 600px) {
+            .metrics-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        .metric-card {
+            padding: 1rem;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .metric-title {
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: var(--text-muted);
+            font-weight: 600;
+        }
+
+        .metric-value {
+            font-family: 'Outfit', sans-serif;
+            font-size: 1.6rem;
+            font-weight: 800;
+            color: #FFFFFF;
+            margin-top: 0.25rem;
+        }
+
+        .metric-sparkline {
+            width: 100%;
+            height: 24px;
+            margin-top: 0.4rem;
+            opacity: 0.85;
+        }
+
+        /* Node Panel layouts */
+        .nodes-panel {
             padding: 1.25rem;
-            background: var(--bg-color);
-            border: 1px solid var(--border-color);
+            margin-bottom: 1.5rem;
+        }
+
+        .nodes-container {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+            max-height: 380px;
+            overflow-y: auto;
+            padding-right: 0.25rem;
+        }
+
+        .node-item {
+            border: 1px solid var(--border-solid);
+            background: rgba(255, 255, 255, 0.01);
             border-radius: 8px;
-            text-align: center;
-            color: var(--accent-color);
+            padding: 0.85rem;
+            transition: all 0.2s ease;
+        }
+
+        .node-item.selected {
+            border-color: rgba(45, 212, 191, 0.4);
+            background: rgba(45, 212, 191, 0.03);
+            box-shadow: inset 0 0 8px rgba(45, 212, 191, 0.05);
+        }
+
+        .node-item-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.4rem;
+        }
+
+        .node-item-title {
+            font-family: 'Outfit', sans-serif;
+            font-weight: 700;
+            font-size: 0.95rem;
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+        }
+
+        .node-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+        }
+
+        .badge-stable {
+            font-size: 0.65rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            padding: 0.15rem 0.4rem;
+            border-radius: 4px;
+            background: rgba(45, 212, 191, 0.1);
+            color: var(--layer1-teal);
+            border: 1px solid rgba(45, 212, 191, 0.2);
+        }
+
+        .badge-hotswap-alert {
+            font-size: 0.65rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            padding: 0.15rem 0.4rem;
+            border-radius: 4px;
+            background: rgba(251, 113, 133, 0.15);
+            color: var(--layer2-rose);
+            border: 1px solid rgba(251, 113, 133, 0.3);
+            animation: hotswap-flash 1s infinite alternate;
+        }
+
+        @keyframes hotswap-flash {
+            0% { opacity: 0.7; box-shadow: 0 0 2px rgba(251, 113, 133, 0.2); }
+            100% { opacity: 1; box-shadow: 0 0 8px rgba(251, 113, 133, 0.5); }
+        }
+
+        .node-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 0.4rem;
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            margin-bottom: 0.5rem;
+        }
+
+        .node-grid span.hl {
+            color: var(--text-primary);
+            font-weight: 500;
+        }
+
+        .node-codeblock {
+            font-family: 'Fira Code', monospace;
+            font-size: 0.72rem;
+            background: rgba(7, 11, 19, 0.6);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 4px;
+            padding: 0.4rem 0.6rem;
+            color: var(--layer2-rose);
+            overflow-x: auto;
+            white-space: nowrap;
+        }
+
+        /* Telemetry Console widget */
+        .console-panel {
+            padding: 1.25rem;
+        }
+
+        .console-log {
+            font-family: 'Fira Code', monospace;
+            font-size: 0.75rem;
+            background: #05080E;
+            border: 1px solid rgba(255, 255, 255, 0.04);
+            color: #38BDF8;
+            padding: 1rem;
+            border-radius: 6px;
+            height: 140px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+        }
+
+        .console-line {
+            margin-bottom: 0.25rem;
+            line-height: 1.4;
+        }
+        .console-line span.time {
+            color: var(--text-muted);
+            margin-right: 0.5rem;
+        }
+        .console-line.alert {
+            color: var(--layer2-rose);
+        }
+        .console-line.mitosis {
+            color: var(--layer4-amber);
+            font-weight: 600;
+        }
+        .console-line.success {
+            color: var(--layer1-teal);
+        }
+
+        /* Documentation views styles */
+        .doc-container {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 2rem 0;
+        }
+
+        .doc-card {
+            padding: 3rem;
+            border-radius: 16px;
+            background: var(--bg-card);
+            border: 1px solid var(--border-solid);
+            box-shadow: 0 10px 40px rgba(0,0,0,0.4);
+        }
+
+        .doc-card h1 {
+            font-family: 'Outfit', sans-serif;
+            font-size: 2.4rem;
+            font-weight: 800;
+            letter-spacing: -0.03em;
+            margin-bottom: 0.5rem;
+            color: #FFFFFF;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+            padding-bottom: 1rem;
+        }
+
+        .doc-card .subtitle {
+            font-size: 1.15rem;
+            color: var(--layer0-indigo);
             font-weight: 600;
             font-family: 'Outfit', sans-serif;
-            transition: transform 0.2s, box-shadow 0.2s;
+            margin-bottom: 2rem;
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
         }
 
-        .link-card:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
-            background: #F3F4F6;
+        .doc-card h2 {
+            font-family: 'Outfit', sans-serif;
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #FFFFFF;
+            margin: 2rem 0 1rem 0;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
         }
 
-        code {
-            background-color: var(--bg-color);
-            padding: 0.2rem 0.4rem;
+        .doc-card p {
+            color: var(--text-muted);
+            margin-bottom: 1.25rem;
+            font-size: 1rem;
+            line-height: 1.7;
+        }
+
+        .doc-card ul, .doc-card ol {
+            margin-left: 1.5rem;
+            margin-bottom: 1.5rem;
+            color: var(--text-muted);
+        }
+
+        .doc-card li {
+            margin-bottom: 0.5rem;
+            line-height: 1.6;
+        }
+
+        .doc-card code {
+            font-family: 'Fira Code', monospace;
+            background: rgba(255, 255, 255, 0.06);
+            padding: 0.15rem 0.35rem;
             border-radius: 4px;
-            font-family: monospace;
             font-size: 0.9em;
-            color: var(--accent-color);
+            color: var(--layer1-teal);
         }
 
-        pre {
-            background-color: #111827;
-            color: #10B981;
-            padding: 1rem;
+        .doc-card blockquote {
+            border-left: 3px solid var(--layer0-indigo);
+            padding: 0.75rem 1.25rem;
+            background: rgba(129, 140, 248, 0.03);
+            margin-bottom: 1.5rem;
+            border-radius: 0 8px 8px 0;
+        }
+
+        .doc-card blockquote p {
+            margin-bottom: 0;
+            font-style: italic;
+            color: #E5E7EB;
+        }
+
+        .doc-card hr {
+            border: 0;
+            height: 1px;
+            background: rgba(255, 255, 255, 0.08);
+            margin: 2.5rem 0;
+        }
+
+        .doc-card pre {
+            background-color: #06090F;
+            color: #34D399;
+            padding: 1.25rem;
             border-radius: 8px;
             overflow-x: auto;
-            font-family: monospace;
-            font-size: 0.9em;
+            font-family: 'Fira Code', monospace;
+            font-size: 0.85em;
             margin-bottom: 1.5rem;
+            border: 1px solid rgba(255, 255, 255, 0.04);
         }
 
         footer {
             text-align: center;
+            padding: 2.5rem;
+            color: var(--text-muted);
             font-size: 0.85rem;
-            color: var(--text-secondary);
-            margin-top: 3rem;
-            border-top: 1px solid var(--border-color);
-            padding-top: 1.5rem;
+            border-top: 1px solid var(--border-solid);
+            background: rgba(7, 11, 19, 0.5);
+            margin-top: auto;
+            letter-spacing: 0.02em;
+        }
+
+        footer a {
+            color: var(--layer0-indigo);
+            text-decoration: none;
+            transition: color 0.15s;
+        }
+        footer a:hover {
+            color: #A5B4FC;
+            text-decoration: underline;
         }
     </style>
 </head>
 <body>
 
-    <div class="container">
-        <header>
+    <header>
+        <div class="logo-section">
             <h1>SHIVYA</h1>
-            <p class="subtitle">The Non-Dual Substrate (NDS)</p>
-        </header>
+            <span class="badge">NON-DUAL SUBSTRATE</span>
+        </div>
+        
+        <nav>
+            <button class="tab-btn active" data-tab="sim-tab">⚡ SIMULATOR</button>
+            <button class="tab-btn" data-tab="manifesto-tab">📖 MANIFESTO</button>
+            <button class="tab-btn" data-tab="philosophy-tab">🧘 PHILOSOPHY</button>
+            <button class="tab-btn" data-tab="architecture-tab">📐 ARCHITECTURE</button>
+        </nav>
 
-        <div class="banner-container">
-            <img src="assets/hero.svg" alt="SHIVYA HodgeMesh Causal Manifold">
+        <div class="status-indicator" id="engine-status-badge">
+            <div class="pulse-dot"></div>
+            <span id="engine-mode-text">Offline WASM</span>
+        </div>
+    </header>
+
+    <main>
+        <!-- Tab 1: Live Simulator -->
+        <div class="view-content active" id="sim-tab">
+            <!-- Observability Statistics Shelf -->
+            <div class="metrics-grid">
+                <div class="metric-card glass-card">
+                    <span class="metric-title">Collective Free Energy (F)</span>
+                    <span class="metric-value" id="stat-collective-f">0.000000</span>
+                    <canvas class="metric-sparkline" id="sparkline-f"></canvas>
+                </div>
+                <div class="metric-card glass-card">
+                    <span class="metric-title">Hodge Curl Deviation</span>
+                    <span class="metric-value" id="stat-curl-dev">0.000000</span>
+                    <canvas class="metric-sparkline" id="sparkline-curl"></canvas>
+                </div>
+                <div class="metric-card glass-card">
+                    <span class="metric-title">Active Node Ensemble</span>
+                    <span class="metric-value" id="stat-nodes-count">3 / 10</span>
+                </div>
+                <div class="metric-card glass-card">
+                    <span class="metric-title">Homeostatic Ticks</span>
+                    <span class="metric-value" id="stat-ticks-count">0</span>
+                </div>
+            </div>
+
+            <!-- Workspace columns -->
+            <div class="simulation-grid">
+                <!-- Left Panel: Physics Canvas & Controllers -->
+                <div class="left-column">
+                    <div class="workspace-panel glass-card">
+                        <div class="panel-header">
+                            <h2>HodgeMesh Simplicial State Topology & Morphogens</h2>
+                            <span style="font-size: 0.75rem; color: var(--text-muted);">Layers 0 & 4 Causal Manifold</span>
+                        </div>
+                        <div class="canvas-container">
+                            <canvas id="physics-canvas"></canvas>
+                            <div class="canvas-instruction">Drag nodes to curve state space • Click node to target</div>
+                        </div>
+                    </div>
+
+                    <div class="control-shelf">
+                        <!-- Play/Pause Controls -->
+                        <div class="control-card glass-card">
+                            <div class="panel-header">
+                                <h2>Substrate Telemetry Driver</h2>
+                            </div>
+                            <div class="button-bar">
+                                <button class="btn btn-indigo" id="btn-pause-play">⏸ PAUSE</button>
+                                <button class="btn btn-dark" id="btn-reset">🔄 RESET</button>
+                            </div>
+                            <div class="button-bar" style="margin-bottom: 0;">
+                                <button class="btn btn-dark" id="btn-inject-stress" disabled>💥 INJECT STRESS</button>
+                                <button class="btn btn-rose-outline" id="btn-trigger-apoptosis" disabled>💀 APORTOSIS CULL</button>
+                            </div>
+                        </div>
+
+                        <!-- Parametric Tuning sliders -->
+                        <div class="control-card glass-card">
+                            <div class="panel-header">
+                                <h2>Generative Parameters</h2>
+                            </div>
+                            <div class="slider-group">
+                                <div class="slider-container">
+                                    <div class="slider-meta">
+                                        <span>Layer 1: Gibbs Learning Rate (&eta;)</span>
+                                        <span class="val" id="val-lr">0.10</span>
+                                    </div>
+                                    <input type="range" id="slide-lr" min="0.01" max="0.5" step="0.01" value="0.10">
+                                </div>
+                                <div class="slider-container">
+                                    <div class="slider-meta">
+                                        <span>Layer 4: GM Activator Stress Threshold (&theta;)</span>
+                                        <span class="val" id="val-mitosis">2.0</span>
+                                    </div>
+                                    <input type="range" id="slide-mitosis" min="1.0" max="3.5" step="0.1" value="2.0">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Right Panel: Node list Inspector & Tickers -->
+                <div class="right-column">
+                    <!-- Ensemble Nodes Card -->
+                    <div class="nodes-panel glass-card">
+                        <div class="panel-header">
+                            <h2>Autotelic Morphic Core Registry (Layers 1, 2, & 3)</h2>
+                        </div>
+                        <div class="nodes-container" id="nodes-inspector">
+                            <!-- Populated dynamically -->
+                            <div style="text-align: center; color: var(--text-muted); padding: 2rem;">
+                                Loading WebAssembly registry...
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Telemetry Ticker -->
+                    <div class="console-panel glass-card">
+                        <div class="panel-header">
+                            <h2>Substrate Telemetry Console Log</h2>
+                        </div>
+                        <div class="console-log" id="console-log">Initializing Shivya substrate...</div>
+                    </div>
+                </div>
+            </div>
         </div>
 
-        <section id="philosophy">
-            <h2>The Philosophical Shift</h2>
-            <p>
-                SHIVYA completely abandons classical consensus models in distributed state networks. Instead of forcing replicas to agree on a global sequential sequence of events, SHIVYA models history as a continuous causal manifold and transactions as geometric flows.
-            </p>
-            <p>
-                By applying the <strong>Hodge Decomposition Theorem</strong> on graph simplicial complexes, we isolate local transaction updates (gradient flow) from circular double spends and race conditions (curl flow). Replicas sync and merge states homeostatically without a central coordinator.
-            </p>
-        </section>
-
-        <section id="documentation">
-            <h2>Documentation & Core Reading</h2>
-            <div class="links-grid">
-                <a class="link-card" href="manifesto.html">The Manifesto</a>
-                <a class="link-card" href="philosophy.html">Core Philosophy</a>
-                <a class="link-card" href="architecture.html">Technical Architecture</a>
+        <!-- Tab 2: Manifesto -->
+        <div class="view-content" id="manifesto-tab">
+            <div class="doc-container">
+                <article class="doc-card">
+                    <h1>The SHIVYA Manifesto</h1>
+                    <div class="subtitle">The Non-Dual Substrate</div>
+                    
+                    <h2>1. The Fall of Logical Time</h2>
+                    <p>For decades, distributed systems have been built on a lie: that there exists a single, objective sequence of events called "Time." We have spent billions of dollars on atomic clocks, global coordinators, and locking algorithms to force our software to agree on a sequential, linear history.</p>
+                    <p>This linear history is a dualistic construct. It separates "correct" transactions from "incorrect" ones, "winning" branches from "losing" ones. It requires a central authority or a distributed consensus committee to declare what is true.</p>
+                    <p>But in the physical universe, time is relative. There is no global clock. There are only local interactions, causal relationships, and energy gradients. Information flows through the universe like water flowing through a manifold, naturally finding its path of least resistance and self-healing when blocked.</p>
+                    <p>SHIVYA is the realization of this physical truth in software.</p>
+                    
+                    <hr>
+                    
+                    <h2>2. The Non-Dual Synthesis</h2>
+                    <p>In the Non-Dual Substrate (NDS), we do not fight conflict; we dissolve it.</p>
+                    <p>Truth is not a static variable stored in a database cell. Truth is a continuous <strong>flow</strong> across a causal manifold. When two peers perform concurrent operations in a partition, they are not creating "conflicting histories" that must be resolved by throwing one away. They are simply curving the state space.</p>
+                    
+                    <blockquote>
+                        <p>By applying the Hodge Decomposition, we resolve conflict not by voting, but by geometric projection.</p>
+                    </blockquote>
+                    
+                    <p>We separate the event flow into:</p>
+                    <ul>
+                        <li><strong>The Exact gradient flow:</strong> the clean, non-conflicting accumulation of state mutations.</li>
+                        <li><strong>The Coexact curl flow:</strong> the rotational tension created by concurrent dependencies (double spends).</li>
+                    </ul>
+                    <p>Reconciliation is the process of projecting out the curl flow, allowing the state potentials to settle back into a flat, harmonious gradient. Just as a biological system uses homeostatic feedback loops to restore balance to its internal organs without a central controller, SHIVYA nodes use the geometry of the causal manifold to converge on identical states automatically.</p>
+                    
+                    <hr>
+                    
+                    <h2>3. Layer 0: HodgeMesh</h2>
+                    <p>HodgeMesh is the foundational engine of this substrate. It represents event history as a directed simplicial complex, where transitions are edges and concurrent context boundaries are triangles. By running a standard-library Conjugate Gradient solver directly on the boundary Laplacians, HodgeMesh resolves conflict at the edge with:</p>
+                    <ul>
+                        <li>Zero global coordination.</li>
+                        <li>Zero proof-of-work energy waste.</li>
+                        <li>Complete mathematical determinism.</li>
+                    </ul>
+                    <p>We are entering an era of self-healing, homeostatic software. <strong>SHIVYA is the substrate.</strong></p>
+                </article>
             </div>
-        </section>
+        </div>
 
-        <section id="quickstart">
-            <h2>Quickstart & Local Simulation</h2>
-            <p>1. To compile the workspace and run the test suite locally:</p>
-            <pre>cargo check --workspace&#x0A;cargo test --workspace</pre>
-            <p>2. To run the background native edge daemon with the **Live WebOS Visualizer WebSocket Bridge** enabled:</p>
-            <pre>cargo run --release -p shivya-cli -- start --port 8085 --visualize</pre>
-            <p>3. To launch a secondary bootstrap node connecting to the P2P mesh:</p>
-            <pre>cargo run --release -p shivya-cli -- start --port 8086 --peer 127.0.0.1:8085</pre>
-            <p>4. Serve the repository locally (e.g. <code>python3 -m http.server</code>) in the root and visit <code>http://localhost:8000/web/</code>. The dashboard will automatically connect to your local WebSocket bridge on port <code>9002</code> and stream real-world physical metrics live!</p>
-        </section>
+        <!-- Tab 3: Philosophy -->
+        <div class="view-content" id="philosophy-tab">
+            <div class="doc-container">
+                <article class="doc-card">
+                    <h1>Core Philosophy</h1>
+                    <div class="subtitle">From Consensus to Flow</div>
 
-        <footer>
-            SHIVYA Project &copy; 2026. Released under the MIT and Apache 2.0 Licenses.
-        </footer>
-    </div>
+                    <h2>1. The Homeostatic Shift</h2>
+                    <p>Classical distributed systems operate under a dualistic dogma: state is a static value, and replicas must compete to agree on a single global sequence of updates. This consensus-centric paradigm requires centralized logical clocks, lock-step validation, and high overhead (e.g., Raft, Paxos, or proof-of-work). It treats concurrent mutations as a zero-sum conflict—one branch must "win" and the other must be discarded.</p>
+                    <p><strong>SHIVYA</strong> completely abandons consensus in favor of <strong>homeostasis</strong>.</p>
+                    <p>Homeostasis is how biological organisms maintain stability. A cell does not wait for a global consensus protocol to update its chemical gradients; it allows local energy flows to propagate, automatically dissipating localized pressures and conflicts through geometric constraints.</p>
+                    <p>In SHIVYA, state is modeled not as discrete numbers in a table, but as a continuous <strong>state potential</strong> defined on a directed simplicial complex:</p>
+                    <ul>
+                        <li><strong>0-simplices (Vertices)</strong> represent local event mutations.</li>
+                        <li><strong>1-simplices (Edges)</strong> represent directed causal transitions (flows).</li>
+                        <li><strong>2-simplices (Triangles)</strong> represent concurrent, multi-dependency execution contexts.</li>
+                    </ul>
 
+                    <hr>
+
+                    <h2>2. The Hodge Decomposition of Causal Flow</h2>
+                    <p>To reconcile concurrent mutations, SHIVYA employs the <strong>Hodge Decomposition Theorem</strong> for graphs. Any discrete flow (1-cochain) &Delta;S on a simplicial complex can be uniquely decomposed into three orthogonal components:</p>
+                    <pre>&Delta;S = d0 &alpha; + d1ᵀ &beta; + &gamma;</pre>
+                    <p>Where:</p>
+                    <ol>
+                        <li><strong>d0 &alpha; (Exact/Gradient Flow):</strong> The irrotational, conflict-free flow. This represents local, legitimate mutations that accumulate cleanly from the genesis state.</li>
+                        <li><strong>d1ᵀ &beta; (Coexact/Curl Flow):</strong> The rotational conflict component. This represents race conditions, double spends, or closed-loop cycles where concurrent updates contradict one another (such as the diamond topology).</li>
+                        <li><strong>&gamma; (Harmonic Flow):</strong> The divergence-free and curl-free component, representing global topological loops.</li>
+                    </ol>
+
+                    <h3>The Homeostatic Projection</h3>
+                    <p>When concurrent branches merge, the discrepancy appears as a non-zero curl. The HodgeMesh engine isolates this curl by solving the coboundary Laplacian system:</p>
+                    <pre>L2 &beta; = d1 &Delta;S    where    L2 = d1 d1ᵀ</pre>
+                    <p>Once the curl potential &beta; is computed via our iterative Conjugate Gradient solver, the conflict is cleanly projected out:</p>
+                    <pre>&Delta;S_reconciled = &Delta;S - d1ᵀ &beta;</pre>
+                    <p>The resulting flow is guaranteed to be curl-free, allowing all nodes to integrate the remaining flow and converge to the identical state balance without exchanging sequence numbers or halting execution.</p>
+                </article>
+            </div>
+        </div>
+
+        <!-- Tab 4: Architecture -->
+        <div class="view-content" id="architecture-tab">
+            <div class="doc-container">
+                <article class="doc-card">
+                    <h1>Technical Architecture</h1>
+                    <div class="subtitle">The 5-Layer Architectural Stack</div>
+                    
+                    <p>SHIVYA organizes its edge computing capabilities into a 5-layer thermodynamic stack, starting from simplicial boundary calculus and building up to graph réaction-diffusion morphogenesis:</p>
+
+                    <h2>Layer 0: Topological Fabric (shivya-hodge)</h2>
+                    <p>Solves discrete exterior calculus (DEC) equations over a simplicial state complex. It partitions network partitions into a gradient flow and a curl flow, projecting out the curl to arrive at consistent states deterministically without time locks.</p>
+
+                    <h2>Layer 1: Predictive Homeostasis (shivya-flux)</h2>
+                    <p>Represents nodes as Active Inference Agents bound by statistical Markov Blankets. Nodes minimize Variational Free Energy (F) via continuous gradient descent over internal belief parameters to adapt to non-stationary sensory inputs.</p>
+
+                    <h2>Layer 2: Autotelic Morphic Core (shivya-morphic)</h2>
+                    <p>Evaluates program loops inside a sandboxed, stack-allocated Register VM with strict instruction cycle budgets. When moving average free energy breaches novelty thresholds, the node expands its generative state dimensions and rewrites its execution bytecode dynamically.</p>
+
+                    <h2>Layer 3: Thermodynamic Collective Ensemble (shivya-onsager)</h2>
+                    <p>Regulates parameter and workload migration across blankets via symmetric conductance couplings. Computes global Collective Free Energy by resolving Harsanyi dividends recursively over adjacent neighbor coalitions to enforce cooperative synergy.</p>
+
+                    <h2>Layer 4: Morphogenetic Pattern Substrate (shivya-turing)</h2>
+                    <p>Solves activator-inhibitor partial differential equations (Gierer-Meinhardt system) using Runge-Kutta 4th Order (RK4) integration with dynamic CFL stability guards. High-stress activator hotspots trigger zero-allocation vertex mitosis (node splits), while low-utility nodes undergo apoptosis (culling) to optimize global resource usage.</p>
+                </article>
+            </div>
+        </div>
+    </main>
+
+    <footer>
+        SHIVYA Non-Dual Distributed Computing Substrate &copy; 2026. Powered by WebAssembly & Rust.
+        <br>
+        <a href="https://github.com/jvoltci/shivya">GitHub Repository</a> • <a href="manifesto.html">Manifesto HTML</a>
+    </footer>
+
+    <!-- WebAssembly Loader & Dashboard Script -->
+    <script type="module">
+        import init, { SubstrateOrchestrator } from "./pkg/telemetry_wasm.js";
+
+        // Global dashboard state
+        const state = {
+            isPaused: false,
+            orchestrator: null,
+            selectedNodeId: null,
+            learningRate: 0.10,
+            mitosisThreshold: 2.0,
+            stepCount: 0,
+            
+            // Decoupled telemetry snapshot
+            wasmState: null,
+            isWSMode: false,
+            ws: null,
+            
+            // Metrics historical queues for sparklines
+            fHistory: Array(50).fill(0),
+            curlHistory: Array(50).fill(0)
+        };
+
+        // DOM element references
+        const consoleLog = document.getElementById("console-log");
+        const badgeModeText = document.getElementById("engine-mode-text");
+        const badgeDot = document.querySelector(".pulse-dot");
+        
+        const statCF = document.getElementById("stat-collective-f");
+        const statCD = document.getElementById("stat-curl-dev");
+        const statNC = document.getElementById("stat-nodes-count");
+        const statTC = document.getElementById("stat-ticks-count");
+        
+        const btnPausePlay = document.getElementById("btn-pause-play");
+        const btnReset = document.getElementById("btn-reset");
+        const btnInjectStress = document.getElementById("btn-inject-stress");
+        const btnApoptosis = document.getElementById("btn-trigger-apoptosis");
+        
+        const slideLR = document.getElementById("slide-lr");
+        const valLR = document.getElementById("val-lr");
+        const slideMitosis = document.getElementById("slide-mitosis");
+        const valMitosis = document.getElementById("val-mitosis");
+        
+        const nodesInspector = document.getElementById("nodes-inspector");
+        const canvas = document.getElementById("physics-canvas");
+        const ctx = canvas.getContext("2d");
+
+        // Logger helper
+        function log(msg, type = "info") {
+            const time = new Date().toLocaleTimeString();
+            const line = document.createElement("div");
+            line.className = `console-line ${type}`;
+            line.innerHTML = `<span class="time">[${time}]</span>${msg}`;
+            consoleLog.appendChild(line);
+            consoleLog.scrollTop = consoleLog.scrollHeight;
+        }
+
+        // Setup tabs
+        document.querySelectorAll("nav button").forEach(btn => {
+            btn.addEventListener("click", () => {
+                document.querySelectorAll("nav button").forEach(b => b.classList.remove("active"));
+                document.querySelectorAll(".view-content").forEach(v => v.classList.remove("active"));
+                
+                btn.classList.add("active");
+                document.getElementById(btn.getAttribute("data-tab")).classList.add("active");
+            });
+        });
+
+        // Setup Canvas sizing
+        function resizeCanvas() {
+            const rect = canvas.parentElement.getBoundingClientRect();
+            canvas.width = rect.width * window.devicePixelRatio;
+            canvas.height = rect.height * window.devicePixelRatio;
+            ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+        }
+        window.addEventListener("resize", resizeCanvas);
+        resizeCanvas();
+
+        // -------------------------------------------------------------
+        // PHYSICS FORCE-DIRECTED LAYOUT (Runs at 60 Hz)
+        // -------------------------------------------------------------
+        const physicsNodes = [];
+        let physicsEdges = [];
+        let particles = [];
+        let dragNode = null;
+        let mouseX = 0;
+        let mouseY = 0;
+
+        class Particle {
+            constructor(sourceId, targetId) {
+                this.sourceId = sourceId;
+                this.targetId = targetId;
+                this.progress = 0; // 0 to 1
+                this.speed = 0.02 + Math.random() * 0.015;
+                this.color = Math.random() > 0.5 ? "var(--layer1-teal)" : "var(--layer0-indigo)";
+            }
+
+            update() {
+                this.progress += this.speed;
+                return this.progress >= 1;
+            }
+
+            draw(nodesMap) {
+                const s = nodesMap[this.sourceId];
+                const t = nodesMap[this.targetId];
+                if (!s || !t) return;
+                
+                const x = s.x + (t.x - s.x) * this.progress;
+                const y = s.y + (t.y - s.y) * this.progress;
+                
+                ctx.beginPath();
+                ctx.arc(x, y, 3, 0, Math.PI * 2);
+                ctx.fillStyle = this.color;
+                ctx.shadowColor = this.color;
+                ctx.shadowBlur = 8;
+                ctx.fill();
+                ctx.shadowBlur = 0;
+            }
+        }
+
+        function getCanvasWidth() { return canvas.width / window.devicePixelRatio; }
+        function getCanvasHeight() { return canvas.height / window.devicePixelRatio; }
+
+        function getNodesMap() {
+            const map = {};
+            physicsNodes.forEach(n => map[n.id] = n);
+            return map;
+        }
+
+        // Initialize coordinates for 3 starter nodes in a triangle
+        function syncPhysicsNodes(activePool, wasmNodes) {
+            const w = getCanvasWidth();
+            const h = getCanvasHeight();
+            const center = { x: w / 2, y: h / 2 };
+            const radius = 100;
+            const wasmNodesMap = {};
+            wasmNodes.forEach(wn => wasmNodesMap[wn.id] = wn);
+            
+            // Remove nodes not in activePool (Apoptosis)
+            for (let i = physicsNodes.length - 1; i >= 0; i--) {
+                const n = physicsNodes[i];
+                if (!activePool.includes(n.id)) {
+                    // Trigger dissolve effect
+                    triggerApoptosisVisual(n.x, n.y);
+                    physicsNodes.splice(i, 1);
+                    if (state.selectedNodeId === n.id) {
+                        state.selectedNodeId = null;
+                        btnInjectStress.disabled = true;
+                        btnApoptosis.disabled = true;
+                    }
+                }
+            }
+
+            // Add or update active nodes
+            activePool.forEach((nodeId, idx) => {
+                let node = physicsNodes.find(n => n.id === nodeId);
+                const wasmData = wasmNodesMap[nodeId] || { u: 0.5, v: 0.5, beliefs: [0,0], free_energy: 0, hotswapped: false };
+
+                if (!node) {
+                    // Node is born (Mitosis)
+                    // If spawned by mitosis, parent node is likely the one with highest u. Position near it!
+                    let parentNode = null;
+                    let maxU = 0;
+                    physicsNodes.forEach(pn => {
+                        if (pn.u > maxU) {
+                            maxU = pn.u;
+                            parentNode = pn;
+                        }
+                    });
+
+                    let x = center.x + radius * Math.cos((idx * 2 * Math.PI) / 3 - Math.PI / 2);
+                    let y = center.y + radius * Math.sin((idx * 2 * Math.PI) / 3 - Math.PI / 2);
+                    let vx = 0;
+                    let vy = 0;
+
+                    if (parentNode) {
+                        x = parentNode.x + (Math.random() - 0.5) * 15;
+                        y = parentNode.y + (Math.random() - 0.5) * 15;
+                        // Mitosis pop velocity impulse
+                        const angle = Math.random() * Math.PI * 2;
+                        vx = Math.cos(angle) * 8;
+                        vy = Math.sin(angle) * 8;
+                        triggerMitosisVisual(x, y);
+                    }
+
+                    node = {
+                        id: nodeId,
+                        x, y,
+                        vx, vy,
+                        radius: 20,
+                        targetRadius: 20,
+                        u: wasmData.morphogen_u,
+                        v: wasmData.morphogen_v,
+                        beliefs: wasmData.beliefs,
+                        freeEnergy: wasmData.free_energy,
+                        hotswappedTimer: wasmData.hotswapped ? 45 : 0
+                    };
+                    physicsNodes.push(node);
+                } else {
+                    // Update variables
+                    node.u = wasmData.morphogen_u;
+                    node.v = wasmData.morphogen_v;
+                    node.beliefs = wasmData.beliefs;
+                    node.freeEnergy = wasmData.free_energy;
+                    if (wasmData.hotswapped) {
+                        node.hotswappedTimer = 45; // flash border for 45 animation frames
+                    }
+                }
+            });
+        }
+
+        // Particle systems for splitting/culling visual flair
+        let visualFlares = [];
+        function triggerMitosisVisual(x, y) {
+            log(`Mitosis triggered! Mitosis split particle dispersion at coordinates: [${x.toFixed(0)}, ${y.toFixed(0)}]`, "mitosis");
+            for (let i = 0; i < 20; i++) {
+                const angle = Math.random() * Math.PI * 2;
+                const speed = 2 + Math.random() * 4;
+                visualFlares.push({
+                    x, y,
+                    vx: Math.cos(angle) * speed,
+                    vy: Math.sin(angle) * speed,
+                    life: 30 + Math.random() * 20,
+                    maxLife: 50,
+                    color: "var(--layer4-amber)",
+                    radius: 2 + Math.random() * 3
+                });
+            }
+        }
+
+        function triggerApoptosisVisual(x, y) {
+            log(`Apoptosis completed. Servered simplicial edges. Node collapsed.`, "alert");
+            for (let i = 0; i < 15; i++) {
+                const angle = Math.random() * Math.PI * 2;
+                const speed = 1 + Math.random() * 2;
+                visualFlares.push({
+                    x, y,
+                    vx: Math.cos(angle) * speed,
+                    vy: Math.sin(angle) * speed,
+                    life: 25 + Math.random() * 15,
+                    maxLife: 40,
+                    color: "var(--layer2-rose)",
+                    radius: 1.5 + Math.random() * 2
+                });
+            }
+        }
+
+        // Simulation Canvas 60 Hz Loop
+        function run60HzGraphics() {
+            requestAnimationFrame(run60HzGraphics);
+            
+            const w = getCanvasWidth();
+            const h = getCanvasHeight();
+            ctx.clearRect(0, 0, w, h);
+
+            // 1. Particle spawning along connections
+            if (!state.isPaused && Math.random() < 0.08 && physicsEdges.length > 0) {
+                const edge = physicsEdges[Math.floor(Math.random() * physicsEdges.length)];
+                particles.push(new Particle(edge[0], edge[1]));
+            }
+
+            // 2. Physics calculation step
+            // Charge force repulsion (electrostatic)
+            const kCharge = 8000;
+            for (let i = 0; i < physicsNodes.length; i++) {
+                const n1 = physicsNodes[i];
+                for (let j = i + 1; j < physicsNodes.length; j++) {
+                    const n2 = physicsNodes[j];
+                    const dx = n2.x - n1.x;
+                    const dy = n2.y - n1.y;
+                    const distSq = dx * dx + dy * dy + 0.1;
+                    const dist = Math.sqrt(distSq);
+                    if (dist < 400) {
+                        const force = kCharge / (distSq * dist);
+                        const fx = dx * force;
+                        const fy = dy * force;
+                        if (n1 !== dragNode) { n1.vx -= fx; n1.vy -= fy; }
+                        if (n2 !== dragNode) { n2.vx += fx; n2.vy += fy; }
+                    }
+                }
+            }
+
+            // Spring force attraction (DEC connection loops)
+            const kSpring = 0.035;
+            const restLength = 110;
+            physicsEdges.forEach(edge => {
+                const n1 = physicsNodes.find(n => n.id === edge[0]);
+                const n2 = physicsNodes.find(n => n.id === edge[1]);
+                if (n1 && n2) {
+                    const dx = n2.x - n1.x;
+                    const dy = n2.y - n1.y;
+                    const dist = Math.sqrt(dx * dx + dy * dy) + 0.1;
+                    const diff = dist - restLength;
+                    const force = kSpring * diff / dist;
+                    const fx = dx * force;
+                    const fy = dy * force;
+                    if (n1 !== dragNode) { n1.vx += fx; n1.vy += fy; }
+                    if (n2 !== dragNode) { n2.vx -= fx; n2.vy -= fy; }
+                }
+            });
+
+            // Center gravity pull
+            const kGravity = 0.008;
+            physicsNodes.forEach(n => {
+                if (n !== dragNode) {
+                    n.vx += (w / 2 - n.x) * kGravity;
+                    n.vy += (h / 2 - n.y) * kGravity;
+                }
+            });
+
+            // Integrate Euler equations & bounds checking
+            physicsNodes.forEach(n => {
+                if (n === dragNode) {
+                    n.x = mouseX;
+                    n.y = mouseY;
+                    n.vx = 0;
+                    n.vy = 0;
+                } else {
+                    n.x += n.vx;
+                    n.y += n.vy;
+                    // friction
+                    n.vx *= 0.82;
+                    n.vy *= 0.82;
+                    
+                    // keep inside boundaries
+                    n.x = Math.max(30, Math.min(w - 30, n.x));
+                    n.y = Math.max(30, Math.min(h - 30, n.y));
+                }
+                
+                if (n.hotswappedTimer > 0) n.hotswappedTimer--;
+            });
+
+            // 3. Render Simplicial complexes (Layer 0 Hodge DEC Triangles)
+            const nodesMap = getNodesMap();
+            // Look for triangles
+            const nLen = physicsNodes.length;
+            const edgesKeys = new Set(physicsEdges.map(e => `${Math.min(e[0], e[1])}-${Math.max(e[0], e[1])}`));
+
+            for (let i = 0; i < nLen; i++) {
+                for (let j = i + 1; j < nLen; j++) {
+                    for (let k = j + 1; k < nLen; k++) {
+                        const u = physicsNodes[i];
+                        const v = physicsNodes[j];
+                        const w = physicsNodes[k];
+                        const e1 = edgesKeys.has(`${Math.min(u.id, v.id)}-${Math.max(u.id, v.id)}`);
+                        const e2 = edgesKeys.has(`${Math.min(v.id, w.id)}-${Math.max(v.id, w.id)}`);
+                        const e3 = edgesKeys.has(`${Math.min(u.id, w.id)}-${Math.max(u.id, w.id)}`);
+                        
+                        if (e1 && e2 && e3) {
+                            // Render 2-simplex triangle context
+                            ctx.beginPath();
+                            ctx.moveTo(u.x, u.y);
+                            ctx.lineTo(v.x, v.y);
+                            ctx.lineTo(w.x, w.y);
+                            ctx.closePath();
+                            ctx.fillStyle = "rgba(129, 140, 248, 0.05)";
+                            ctx.fill();
+                            ctx.strokeStyle = "rgba(129, 140, 248, 0.15)";
+                            ctx.lineWidth = 1;
+                            ctx.setLineDash([4, 4]);
+                            ctx.stroke();
+                            ctx.setLineDash([]);
+                        }
+                    }
+                }
+            }
+
+            // 4. Render Edges (glowing transitions)
+            physicsEdges.forEach(edge => {
+                const n1 = nodesMap[edge[0]];
+                const n2 = nodesMap[edge[1]];
+                if (n1 && n2) {
+                    ctx.beginPath();
+                    ctx.moveTo(n1.x, n1.y);
+                    ctx.lineTo(n2.x, n2.y);
+                    ctx.strokeStyle = "rgba(129, 140, 248, 0.35)";
+                    ctx.lineWidth = 2;
+                    ctx.stroke();
+                }
+            });
+
+            // 5. Render Particles along edges
+            for (let i = particles.length - 1; i >= 0; i--) {
+                const p = particles[i];
+                if (p.update()) {
+                    particles.splice(i, 1);
+                } else {
+                    p.draw(nodesMap);
+                }
+            }
+
+            // 6. Render Particles burst visual effects
+            for (let i = visualFlares.length - 1; i >= 0; i--) {
+                const f = visualFlares[i];
+                f.x += f.vx;
+                f.y += f.vy;
+                f.life--;
+                if (f.life <= 0) {
+                    visualFlares.splice(i, 1);
+                } else {
+                    ctx.beginPath();
+                    ctx.arc(f.x, f.y, f.radius * (f.life / f.maxLife), 0, Math.PI * 2);
+                    ctx.fillStyle = f.color;
+                    ctx.globalAlpha = f.life / f.maxLife;
+                    ctx.fill();
+                    ctx.globalAlpha = 1.0;
+                }
+            }
+
+            // 7. Render Node Glyphs
+            physicsNodes.forEach(node => {
+                const isSelected = state.selectedNodeId === node.id;
+                
+                // Pulsing Markov Blanket Aura (Layer 4 GM Activator u size)
+                const pulseScale = 1.0 + 0.15 * Math.sin(Date.now() * 0.005 + node.id);
+                const auraRadius = (22 + node.u * 8) * pulseScale;
+
+                ctx.beginPath();
+                ctx.arc(node.x, node.y, auraRadius, 0, Math.PI * 2);
+                const grad = ctx.createRadialGradient(node.x, node.y, 10, node.x, node.y, auraRadius);
+                grad.addColorStop(0, "rgba(45, 212, 191, 0.18)");
+                grad.addColorStop(0.6, "rgba(129, 140, 248, 0.04)");
+                grad.addColorStop(1, "rgba(7, 11, 19, 0)");
+                ctx.fillStyle = grad;
+                ctx.fill();
+
+                // Glowing outer ring (hotswap alert triggers high rose border)
+                ctx.beginPath();
+                ctx.arc(node.x, node.y, 22, 0, Math.PI * 2);
+                
+                if (node.hotswappedTimer > 0) {
+                    ctx.strokeStyle = `rgba(251, 113, 133, ${node.hotswappedTimer / 45})`;
+                    ctx.lineWidth = 4;
+                    ctx.shadowColor = "var(--layer2-rose)";
+                    ctx.shadowBlur = 15;
+                } else if (isSelected) {
+                    ctx.strokeStyle = "var(--layer1-teal)";
+                    ctx.lineWidth = 3;
+                    ctx.shadowColor = "var(--layer1-teal)";
+                    ctx.shadowBlur = 10;
+                } else {
+                    ctx.strokeStyle = "var(--layer0-indigo)";
+                    ctx.lineWidth = 2;
+                }
+                ctx.stroke();
+                ctx.shadowBlur = 0; // reset
+
+                // Glassmorphic core
+                ctx.beginPath();
+                ctx.arc(node.x, node.y, 20, 0, Math.PI * 2);
+                ctx.fillStyle = "#0A0F1B";
+                ctx.fill();
+
+                // Inner core rings
+                ctx.beginPath();
+                ctx.arc(node.x, node.y, 14, 0, Math.PI * 2);
+                ctx.strokeStyle = "rgba(255, 255, 255, 0.08)";
+                ctx.stroke();
+
+                // Center label (Outfit font)
+                ctx.fillStyle = "#FFFFFF";
+                ctx.font = "bold 11px 'Outfit', sans-serif";
+                ctx.textAlign = "center";
+                ctx.textBaseline = "middle";
+                ctx.fillText(`N${node.id}`, node.x, node.y);
+
+                // Draw belief coordinate vector point inside the core (Layer 1)
+                const beliefX = node.x + (node.beliefs[0] || 0) * 8;
+                const beliefY = node.y + (node.beliefs[1] || 0) * 8;
+                ctx.beginPath();
+                ctx.arc(beliefX, beliefY, 3, 0, Math.PI * 2);
+                ctx.fillStyle = "var(--layer1-teal)";
+                ctx.fill();
+            });
+        }
+
+        // Setup mouse drag event handlers
+        canvas.addEventListener("mousedown", (e) => {
+            const rect = canvas.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+
+            // Find clicked node
+            let clickedNode = null;
+            for (let i = 0; i < physicsNodes.length; i++) {
+                const n = physicsNodes[i];
+                const dx = n.x - x;
+                const dy = n.y - y;
+                if (dx * dx + dy * dy < 700) { // Click threshold
+                    clickedNode = n;
+                    break;
+                }
+            }
+
+            if (clickedNode) {
+                dragNode = clickedNode;
+                state.selectedNodeId = clickedNode.id;
+                
+                // Enable manual buttons
+                btnInjectStress.disabled = false;
+                btnApoptosis.disabled = false;
+                
+                // Highlight item in cards list
+                updateDOMRegistry();
+            } else {
+                state.selectedNodeId = null;
+                btnInjectStress.disabled = true;
+                btnApoptosis.disabled = true;
+                updateDOMRegistry();
+            }
+        });
+
+        canvas.addEventListener("mousemove", (e) => {
+            const rect = canvas.getBoundingClientRect();
+            mouseX = e.clientX - rect.left;
+            mouseY = e.clientY - rect.top;
+        });
+
+        window.addEventListener("mouseup", () => {
+            dragNode = null;
+        });
+
+
+        // -------------------------------------------------------------
+        // DECOUPLED SPARKLINE RENDERERS (Runs at 15 Hz)
+        // -------------------------------------------------------------
+        function drawSparkline(canvasId, history, color) {
+            const c = document.getElementById(canvasId);
+            if (!c) return;
+            const ctxSpark = c.getContext("2d");
+            const w = c.width = c.clientWidth;
+            const h = c.height = c.clientHeight;
+
+            ctxSpark.clearRect(0, 0, w, h);
+            ctxSpark.beginPath();
+            
+            const maxVal = Math.max(...history, 0.0001);
+            const minVal = Math.min(...history, 0.0);
+            const valRange = maxVal - minVal;
+
+            for (let i = 0; i < history.length; i++) {
+                const x = (i / (history.length - 1)) * w;
+                const y = h - ((history[i] - minVal) / valRange) * (h - 4) - 2;
+                if (i === 0) ctxSpark.moveTo(x, y);
+                else ctxSpark.lineTo(x, y);
+            }
+
+            ctxSpark.strokeStyle = color;
+            ctxSpark.lineWidth = 1.5;
+            ctxSpark.stroke();
+
+            // gradient fill below sparkline
+            ctxSpark.lineTo(w, h);
+            ctxSpark.lineTo(0, h);
+            ctxSpark.closePath();
+            const grad = ctxSpark.createLinearGradient(0, 0, 0, h);
+            grad.addColorStop(0, color.replace("1)", "0.15)"));
+            grad.addColorStop(1, color.replace("1)", "0)"));
+            ctxSpark.fillStyle = grad;
+            ctxSpark.fill();
+        }
+
+
+        // -------------------------------------------------------------
+        // DECOUPLED WASM SIMULATION ENGINE (Stepped strictly at 15 Hz)
+        // -------------------------------------------------------------
+        let lastNodeEquations = {};
+
+        async function wasmStep() {
+            if (state.isPaused || !state.orchestrator) return;
+
+            // Execute unified 5-layer step loop in WebAssembly
+            try {
+                // If in WebSocket mode, we get inputs from native daemon broadcast. Otherwise fall back to local WASM step.
+                if (state.isWSMode) return; // WebSocket mode updates run asynchronously on message
+
+                const emptyInputs = [];
+                // Run WASM step execution
+                const jsonPayload = state.orchestrator.step(emptyInputs);
+                const data = JSON.parse(jsonPayload);
+                
+                // Save snap
+                state.wasmState = data;
+                state.stepCount = data.step_count;
+                
+                // Track historical queues
+                state.fHistory.shift();
+                state.fHistory.push(data.collective_free_energy);
+                
+                state.curlHistory.shift();
+                state.curlHistory.push(data.curl_deviation);
+                
+                // Sync elements
+                physicsEdges = data.edges || [];
+                syncPhysicsNodes(data.active_pool, data.nodes);
+                
+                // Trigger updates to DOM (throttled at 15 Hz inside this same callback)
+                updateDOMRegistry();
+                updateDOMStats();
+                
+            } catch (err) {
+                console.error("WASM step failed:", err);
+            }
+        }
+
+        // Update stats DOM panel
+        function updateDOMStats() {
+            if (!state.wasmState) return;
+            const data = state.wasmState;
+            
+            statCF.innerText = data.collective_free_energy.toFixed(6);
+            statCD.innerText = data.curl_deviation.toFixed(6);
+            statNC.innerText = `${data.active_nodes_count} / 10`;
+            statTC.innerText = data.step_count;
+            
+            // Sparklines
+            drawSparkline("sparkline-f", state.fHistory, "rgba(45, 212, 191, 1)");
+            drawSparkline("sparkline-curl", state.curlHistory, "rgba(129, 140, 248, 1)");
+        }
+
+        // Update sidebar node registry list in place
+        function updateDOMRegistry() {
+            if (!state.wasmState) return;
+            const data = state.wasmState;
+            
+            nodesInspector.innerHTML = "";
+            data.nodes.forEach(node => {
+                const nodeItem = document.createElement("div");
+                const isSelected = state.selectedNodeId === node.id;
+                
+                nodeItem.className = `node-item ${isSelected ? 'selected' : ''}`;
+                nodeItem.addEventListener("click", () => {
+                    state.selectedNodeId = node.id;
+                    btnInjectStress.disabled = false;
+                    btnApoptosis.disabled = false;
+                    updateDOMRegistry();
+                });
+
+                // Hotswap status calculation
+                const isSwapped = lastNodeEquations[node.id] && lastNodeEquations[node.id] !== node.morphic_equation;
+                if (isSwapped || node.hotswapped) {
+                    if (isSwapped) {
+                        log(`[Layer 2 VM Hotswap] Node ${node.id} average free energy breached novelty threshold! Swapped expression register.`, "alert");
+                    }
+                    lastNodeEquations[node.id] = node.morphic_equation;
+                } else {
+                    lastNodeEquations[node.id] = node.morphic_equation;
+                }
+
+                const badgeHtml = (isSwapped || node.hotswapped) 
+                    ? `<span class="badge-hotswap-alert">Hotswapped 🦀</span>` 
+                    : `<span class="badge-stable">Stable</span>`;
+
+                const beliefsStr = node.beliefs.map(val => val.toFixed(4)).join(", ");
+
+                nodeItem.innerHTML = `
+                    <div class="node-item-header">
+                        <div class="node-item-title">
+                            <div class="node-dot" style="background-color: ${isSelected ? 'var(--layer1-teal)' : 'var(--layer0-indigo)'};"></div>
+                            Node ${node.id}
+                        </div>
+                        ${badgeHtml}
+                    </div>
+                    <div class="node-grid">
+                        <div>Free Energy (F): <span class="hl">${node.free_energy.toFixed(4)}</span></div>
+                        <div>Belief Dim: <span class="hl">${node.belief_dim}D</span></div>
+                        <div style="grid-column: span 2;">Beliefs (&mu;q): <span class="hl">[${beliefsStr}]</span></div>
+                        <div>Morphogen U: <span class="hl">${node.morphogen_u.toFixed(4)}</span></div>
+                        <div>Morphogen V: <span class="hl">${node.morphogen_v.toFixed(4)}</span></div>
+                    </div>
+                    <div class="node-codeblock">${node.morphic_equation}</div>
+                `;
+                nodesInspector.appendChild(nodeItem);
+            });
+        }
+
+
+        // -------------------------------------------------------------
+        // UNIFIED WEBSOCKETobservability HANDSHAKE (Local Daemon Stream)
+        // -------------------------------------------------------------
+        async function tryWebSocket() {
+            return new Promise((resolve) => {
+                log("Testing connection handshake with native WebSocket daemon on port 9002...");
+                const socket = new WebSocket("ws://127.0.0.1:9002");
+                
+                socket.onopen = () => {
+                    state.isWSMode = true;
+                    state.ws = socket;
+                    log("Handshake successful! Live native WebSocket server coupled.", "success");
+                    
+                    // UI changes
+                    badgeModeText.innerText = "Live WebSocket";
+                    badgeModeText.style.color = "var(--layer1-teal)";
+                    badgeDot.style.backgroundColor = "var(--layer1-teal)";
+                    
+                    btnPausePlay.innerText = "Native Streaming";
+                    btnPausePlay.disabled = true;
+                    btnReset.disabled = true;
+                    
+                    resolve(true);
+                };
+                
+                socket.onmessage = (event) => {
+                    try {
+                        const data = JSON.parse(event.data);
+                        
+                        // Treat incoming websocket broadcast identical to local state snapshot
+                        state.wasmState = data;
+                        state.stepCount = data.step_count || state.stepCount + 1;
+                        data.step_count = state.stepCount;
+                        
+                        state.fHistory.shift();
+                        state.fHistory.push(data.collective_free_energy);
+                        
+                        state.curlHistory.shift();
+                        state.curlHistory.push(data.curl_deviation);
+                        
+                        physicsEdges = data.edges || [];
+                        syncPhysicsNodes(data.active_pool || data.nodes.map(n => n.id), data.nodes);
+                        
+                        updateDOMStats();
+                        updateDOMRegistry();
+                    } catch (e) {
+                        console.error("Error reading WebSocket frame:", e);
+                    }
+                };
+                
+                socket.onclose = () => {
+                    if (state.isWSMode) {
+                        log("WebSocket broadcast closed. Recoupling client back to browser WASM fallback...", "alert");
+                        fallbackToLocalWASM();
+                    }
+                    resolve(false);
+                };
+                
+                socket.onerror = () => {
+                    resolve(false);
+                };
+            });
+        }
+
+        async function fallbackToLocalWASM() {
+            state.isWSMode = false;
+            if (state.ws) {
+                state.ws.close();
+                state.ws = null;
+            }
+            
+            badgeModeText.innerText = "Browser WASM";
+            badgeModeText.style.color = "var(--layer0-indigo)";
+            badgeDot.style.backgroundColor = "var(--layer0-indigo)";
+            
+            btnPausePlay.innerText = state.isPaused ? "▶ PLAY" : "⏸ PAUSE";
+            btnPausePlay.disabled = false;
+            btnReset.disabled = false;
+            
+            if (!state.orchestrator) {
+                try {
+                    await init();
+                    state.orchestrator = new SubstrateOrchestrator();
+                    log("Local WebAssembly substrate compiled and initialized successfully.", "success");
+                } catch (err) {
+                    log(`Failed compiling WASM: ${err}`, "alert");
+                }
+            }
+            
+            // Generate initial values
+            const emptyInputs = [];
+            const jsonPayload = state.orchestrator.step(emptyInputs);
+            const data = JSON.parse(jsonPayload);
+            state.wasmState = data;
+            physicsEdges = data.edges || [];
+            syncPhysicsNodes(data.active_pool, data.nodes);
+            updateDOMStats();
+            updateDOMRegistry();
+        }
+
+        // -------------------------------------------------------------
+        // APPLICATION CONTROLLERS & INITIALIZATION
+        // -------------------------------------------------------------
+        
+        // Pause/Play
+        btnPausePlay.addEventListener("click", () => {
+            if (state.isWSMode) return;
+            state.isPaused = !state.isPaused;
+            btnPausePlay.innerText = state.isPaused ? "▶ PLAY" : "⏸ PAUSE";
+            btnPausePlay.className = state.isPaused ? "btn btn-indigo" : "btn btn-dark";
+            log(state.isPaused ? "Simulation driver suspended." : "Simulation driver resumed.");
+        });
+
+        // Reset
+        btnReset.addEventListener("click", () => {
+            if (state.isWSMode || !state.orchestrator) return;
+            state.orchestrator.reset();
+            state.fHistory.fill(0);
+            state.curlHistory.fill(0);
+            log("State spaces reset. Simplicial complexes flattened back to genesis.", "success");
+            
+            // Run step to fetch initial state
+            const emptyInputs = [];
+            const jsonPayload = state.orchestrator.step(emptyInputs);
+            const data = JSON.parse(jsonPayload);
+            state.wasmState = data;
+            physicsEdges = data.edges || [];
+            syncPhysicsNodes(data.active_pool, data.nodes);
+            updateDOMStats();
+            updateDOMRegistry();
+        });
+
+        // Inject Stress (Mitosis split)
+        btnInjectStress.addEventListener("click", () => {
+            if (state.selectedNodeId === null || state.isWSMode || !state.orchestrator) return;
+            const nodeId = state.selectedNodeId;
+            const res = state.orchestrator.inject_stress(nodeId);
+            if (res) {
+                log(`[Manual Trigger] Injected high activator stress to Node ${nodeId}. Stepping mitosis...`, "alert");
+            }
+        });
+
+        // Apoptosis culling
+        btnApoptosis.addEventListener("click", () => {
+            if (state.selectedNodeId === null || state.isWSMode || !state.orchestrator) return;
+            const nodeId = state.selectedNodeId;
+            const res = state.orchestrator.trigger_apoptosis(nodeId);
+            if (res) {
+                log(`[Manual Trigger] Severe sensory decay injected on Node ${nodeId}. Stepping apoptosis...`, "alert");
+            }
+        });
+
+        // Handle sliders updates
+        slideLR.addEventListener("input", (e) => {
+            const val = parseFloat(e.target.value);
+            valLR.innerText = val.toFixed(2);
+            state.learningRate = val;
+            // WASM handles learning rate in belief updates
+        });
+
+        slideMitosis.addEventListener("input", (e) => {
+            const val = parseFloat(e.target.value);
+            valMitosis.innerText = val.toFixed(1);
+            state.mitosisThreshold = val;
+            if (state.orchestrator) {
+                // Update mitosis threshold in engine directly
+                state.orchestrator.mitosis.theta_mitosis = val;
+            }
+        });
+
+        // Launch Application
+        async function bootstrapApp() {
+            // 1. Kick off 60 Hz Canvas graphics loop immediately (physics updates smooth)
+            run60HzGraphics();
+
+            // 2. Try Handshake with local running P2P network daemon
+            const hasWS = await tryWebSocket();
+            if (!hasWS) {
+                log("Handshake failed (daemon offline). Fallback browser execution activated.");
+                await fallbackToLocalWASM();
+            }
+
+            // 3. Kick off decoupled WASM step iteration throttled strictly at 15 Hz (66.7ms)
+            setInterval(wasmStep, 66.7);
+        }
+
+        bootstrapApp();
+    </script>
 </body>
 </html>

@@ -7,7 +7,7 @@
 
 ![Shivya Architecture Hero Banner](docs/assets/hero.svg)
 
-Shivya is a bare-metal, zero-dependency, edge-native distributed substrate. It discards dualistic, clock-synchronized consensus models (e.g. Paxos, Raft, Nakamoto Consensus) in favor of a continuous, thermodynamic geometric manifold driven by Discrete Exterior Calculus and Variational Free Energy minimization.
+Shivya is a bare-metal, zero-dependency, edge-native runtime: a **consensus-free localized resource diffusion balancer for edge hardware arrays**, built on Discrete Exterior Calculus and Variational Free Energy minimization. It is *not* a drop-in replacement for Paxos or Raft. The contributions are (i) a Hodge-projector that removes curl from concurrent edge-state deltas after partition heal, and (ii) a multi-agent Active-Inference loop that diffuses load through symmetric Onsager couplings. The underlying mathematics is referenced in [CITATIONS.md](CITATIONS.md).
 
 ---
 
@@ -39,7 +39,7 @@ graph TD
 
 ### Layer 4: Morphogenetic Pattern Substrate [`shivya-turing`](https://crates.io/crates/shivya-turing)
 - **Core Abstraction:** Non-linear Graph Reaction-Diffusion & Network Plasticity.
-- **Function:** Solves activator-inhibitor partial differential equations using Runge-Kutta 4th Order (RK4) integration with dynamic CFL stability guards. High-stress activator hotspots trigger zero-allocation vertex mitosis (node splits), while low-utility nodes undergo apoptosis (culling) to optimize global resource usage.
+- **Function:** Solves activator-inhibitor partial differential equations using Runge-Kutta 4th Order (RK4) integration with dynamic CFL stability guards. High-stress activator hotspots trigger **pre-allocated object-pool mesh topology** updates (node splits without runtime heap resizing crashes), while low-utility nodes undergo apoptosis (culling) to optimize global resource usage.
 
 ---
 
@@ -47,21 +47,24 @@ graph TD
 
 To unify geographically separated hardware edge daemons into a cooperative statistical field, Shivya utilizes a decentralized peer-to-peer transport layer (`crates/shivya-p2p`):
 - **XOR Kademlia Routing (`src/routing.rs`):** Nodes generate a unique 160-bit identifier (`NodeId`) and maintain stack-allocated K-buckets ($K=4$). Stale nodes are kept at bay using an active **LRU Ping Eviction Guard**.
-- **Thermodynamic UDP Framing (`src/transport.rs`):** Low-overhead, zero-heap packet serialization that transmits state-difference vectors, parameter diffs, and simplicial splits across nodes in Big-Endian float format.
+- **Kademlia RPC primitives (`src/transport.rs`):** Full `PING` / `PONG` / `FIND_NODE` / `FOUND_NODES` / `STORE` / `FIND_VALUE` / `FOUND_VALUE` set, with bounded-size frames (≤ 1 MTU, no UDP fragmentation) and an iterative discovery loop that walks returned peers via successive PINGs. A local DHT key/value store sits behind `STORE`/`FIND_VALUE`.
+- **Thermodynamic UDP Framing (`src/protocol.rs`):** Fixed-layout binary serialization (Big-Endian floats) for the control- and state-plane payloads carried over the same socket.
+- **Partition-test hook:** Each transport exposes a `block(addr)` / `unblock(addr)` API that drops outbound frames to a given address. This is used by [`tests/jepsen_partitions.rs`](tests/jepsen_partitions.rs) to inject controllable partitions across five real localhost UDP nodes and assert that the Layer-0 Hodge projector wipes out the curl introduced by the split.
 
 ---
 
 ## Native Edge Daemon CLI (`shivya-cli`)
 
-Shivya includes a high-performance native command-line daemon (`crates/shivya-cli`) configured with a multi-threaded Tokio runtime. It runs headless in the background, sampling physical hardware telemetry (CPU load and network throughput) to step the 5-layer active inference substrate in real-time, while bridging topology splits and state updates to a premium visualizer dashboard.
+Shivya includes a native command-line daemon (`crates/shivya-cli`) configured with a multi-threaded Tokio runtime. It samples real host telemetry via the [`sysinfo`](https://docs.rs/sysinfo) crate (CPU load, network bytes RX/TX, memory utilisation ratio) to step the 5-layer active-inference substrate, and bridges topology splits and state updates to the optional visualizer dashboard.
 
 ### CLI Daemon Commands & Options
 
 The CLI `start` subcommand supports several options to configure the peer-to-peer network and live visualization bridge:
 
-- `--port <PORT>`: The UDP port to bind the P2P thermodynamic transport listener (defaults to `8085`).
-- `--peer <ADDR:PORT>`: Optional address of an existing peer to bootstrap into the causal simplicial network.
-- `--visualize`: Spawns a non-blocking WebSocket server on `127.0.0.1:9002` to stream physical telemetry, state-differences, and network graphs live to the WebOS observability dashboard.
+- `--port <PORT>`: The UDP port to bind the P2P transport listener (defaults to `8085`).
+- `--peer <ADDR:PORT>`: Optional address of an existing peer to bootstrap into the causal simplicial network. Triggers an immediate `PING` followed by a `FIND_NODE(self)` to seed the iterative bucket-discovery walk.
+- `--visualize`: Spawns a non-blocking WebSocket server on `127.0.0.1:9002` to stream the latest orchestrator status JSON to the observability dashboard.
+- `--daemon` (unix only): Performs a true `fork()` + session detach via the `daemonize` crate **before** the Tokio runtime is built. Writes its PID to `/tmp/shivya.pid` and redirects `stdout` / `stderr` to `/tmp/shivya.out` and `/tmp/shivya.err`. The Tokio reactor then starts inside the detached child so I/O descriptors survive after the launching shell closes.
 
 ### Running the CLI Daemon
 

@@ -28,3 +28,7 @@ shivya-flux = { version = "0.1.0", path = "crates/shivya-flux" }
 shivya-morphic = { version = "0.1.0", path = "crates/shivya-morphic" }
 shivya-onsager = { version = "0.1.0", path = "crates/shivya-onsager" }
 shivya-turing = { version = "0.1.0", path = "crates/shivya-turing" }
+
+[dev-dependencies]
+shivya-p2p = { version = "0.1.0", path = "crates/shivya-p2p" }
+tokio = { version = "1.0", features = ["full"] }

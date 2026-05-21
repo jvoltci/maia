@@ -8,7 +8,7 @@
 
 Classical distributed systems operate under a dualistic dogma: state is a static value, and replicas must compete to agree on a single global sequence of updates. This consensus-centric paradigm requires centralized logical clocks, lock-step validation, and high overhead (e.g., Raft, Paxos, or proof-of-work). It treats concurrent mutations as a zero-sum conflict—one branch must "win" and the other must be discarded.
 
-**SHIVYA** completely abandons consensus in favor of **homeostasis**. 
+**SHIVYA** takes a different path: rather than competing for total order, the substrate behaves as a **consensus-free localized resource balancer** that lets local edge-state deltas accumulate independently and then projects out the curl component when partitions heal. This is not equivalent to Paxos/Raft and does not provide linearizable global ordering; see [CITATIONS.md](../CITATIONS.md) for the underlying decomposition theorem and a discussion of which workloads this regime suits.
 
 Homeostasis is how biological organisms maintain stability. A cell does not wait for a global consensus protocol to update its chemical gradients; it allows local energy flows to propagate, automatically dissipating localized pressures and conflicts through geometric constraints. 
 

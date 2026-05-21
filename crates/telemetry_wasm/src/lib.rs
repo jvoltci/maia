@@ -1,5 +1,30 @@
 use wasm_bindgen::prelude::*;
 use shivya_hodge::complex::SimplicialStateComplex;
+
+/// Physics-derived strain proxy used when no live telemetry is supplied.
+///
+/// In a browser the host's CPU is sandboxed away, so we fall back to a
+/// deterministic Gierer–Meinhardt-coupled signal: strain rises with the local
+/// activator `u` and is damped by the inhibitor `v`. Native (rlib) builds use
+/// the exact same formula so unit tests remain reproducible.
+#[cfg(target_arch = "wasm32")]
+fn derived_strain(step: usize, node: usize, u: f64, v: f64) -> Vec<f64> {
+    // Bounded, deterministic, monotone in u and inverse in v.
+    let phase = (step as f64) * 0.05 + (node as f64) * 0.3;
+    let activator_strain = (u / (1.0 + v.abs())).clamp(0.0, 1.0);
+    let drift = 0.5 + 0.25 * phase.sin();
+    let primary = 0.4 * activator_strain + 0.6 * drift;
+    vec![primary.clamp(0.0, 1.0), (primary * 0.85).clamp(0.0, 1.0)]
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+fn derived_strain(step: usize, node: usize, u: f64, v: f64) -> Vec<f64> {
+    let phase = (step as f64) * 0.05 + (node as f64) * 0.3;
+    let activator_strain = (u / (1.0 + v.abs())).clamp(0.0, 1.0);
+    let drift = 0.5 + 0.25 * phase.sin();
+    let primary = 0.4 * activator_strain + 0.6 * drift;
+    vec![primary.clamp(0.0, 1.0), (primary * 0.85).clamp(0.0, 1.0)]
+}
 use shivya_hodge::reconciler::reconcile_state_delta;
 use shivya_flux::model::GibbsFluxAgent;
 use shivya_morphic::{DynamicGibbsAgent, Expr, MorphicHotSwapper, compile};
@@ -300,18 +325,18 @@ impl SubstrateOrchestrator {
             }
         }
 
-        // 3. Prepare CPU observations for active agents (or simulate them if input is empty)
+        // CPU observations come from one of two sources:
+        //   - real `inputs` (callers wired to actual JS-side telemetry), or
+        //   - a deterministic physics-derived strain model when no inputs are
+        //     supplied. The browser sandbox forbids reading host CPU, so a
+        //     reproducible diffusion-driven proxy stands in.
         let mut obs = vec![vec![0.0, 0.0]; self.max_nodes];
         for &i in &active_indices {
             if 2 * i + 1 < inputs.len() {
                 obs[i][0] = inputs[2 * i];
                 obs[i][1] = inputs[2 * i + 1];
             } else {
-                // Autonomous mode: oscillating loads over time
-                let t = (self.step_count as f64 * 0.15) + (i as f64 * 1.2);
-                let load = 0.45 + 0.35 * t.sin(); // oscillates between 0.1 and 0.8
-                obs[i][0] = load;
-                obs[i][1] = load * 0.85;
+                obs[i] = derived_strain(self.step_count, i, self.turing.u[i], self.turing.v[i]);
             }
         }
 

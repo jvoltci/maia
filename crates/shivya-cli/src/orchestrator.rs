@@ -172,8 +172,11 @@ impl NativeOrchestrator {
         self.p2p_transport = Some(p2p_transport);
     }
 
-    pub fn step(&mut self, cpu_load: f64, net_rate: f64) {
+    pub fn step_with_telemetry(&mut self, cpu_load: f64, net_rate: f64, memory_used_ratio: f64) {
         self.step_count += 1;
+        // Memory pressure modulates the Onsager base coupling: heavier RAM
+        // contention => stronger inter-node migration pressure.
+        let memory_pressure_scale = 1.0 + memory_used_ratio.clamp(0.0, 1.0);
 
         // 0. Sync K-bucket peers to Layer 0 Hodge Simplicial Complex and Onsager connections
         if let Some(ref table) = self.p2p_table {
@@ -205,13 +208,14 @@ impl NativeOrchestrator {
             }
         }
 
-        // Scale coupling coefficients dynamically based on network bit-rate
-        let net_rate_scaled = (net_rate / 1_000_000.0).min(5.0); // max 5.0 scale
+        // Coupling reflects real host pressure: net bit-rate × RAM pressure.
+        let net_rate_scaled = (net_rate / 1_000_000.0).min(5.0);
         let base_coupling = 0.5;
         for i in 0..self.max_nodes {
             for j in 0..self.max_nodes {
                 if i != j {
-                    self.ensemble.regulator.l_matrix[i][j] = base_coupling * (1.0 + net_rate_scaled);
+                    self.ensemble.regulator.l_matrix[i][j] =
+                        base_coupling * (1.0 + net_rate_scaled) * memory_pressure_scale;
                 }
             }
         }

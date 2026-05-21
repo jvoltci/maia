@@ -799,6 +799,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "shivya-telemetry"
+version = "0.2.0"
+dependencies = [
+ "getrandom",
+ "shivya-flux",
+ "shivya-hodge",
+ "shivya-morphic",
+ "shivya-onsager",
+ "shivya-turing",
+ "wasm-bindgen",
+]
+
+[[package]]
 name = "shivya-turing"
 version = "0.2.0"
 dependencies = [
@@ -887,19 +900,6 @@ dependencies = [
  "once_cell",
  "rayon",
  "windows",
-]
-
-[[package]]
-name = "telemetry_wasm"
-version = "0.2.0"
-dependencies = [
- "getrandom",
- "shivya-flux",
- "shivya-hodge",
- "shivya-morphic",
- "shivya-onsager",
- "shivya-turing",
- "wasm-bindgen",
 ]
 
 [[package]]

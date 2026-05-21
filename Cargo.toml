@@ -14,7 +14,7 @@ resolver = "2"
 members = [
     "crates/shivya-hodge",
     "crates/shivya-flux",
-    "crates/telemetry_wasm",
+    "crates/shivya-telemetry",
     "crates/shivya-morphic",
     "crates/shivya-onsager",
     "crates/shivya-turing",

@@ -173,7 +173,7 @@ All core modules are zero-dependency, stack-allocated, and target WebAssembly (`
 - [`crates/shivya-onsager`](https://crates.io/crates/shivya-onsager) - Layer 3 Thermodynamic multi-agent ensemble
 - [`crates/shivya-turing`](https://crates.io/crates/shivya-turing) - Layer 4 Network reaction-diffusion morphogenesis
 - [`crates/shivya-p2p`](https://crates.io/crates/shivya-p2p) - Decentralized Kademlia P2P transport & UDP network mesh
-- [`crates/telemetry_wasm`](https://crates.io/crates/telemetry_wasm) - Unified Substrate WASM telemetry bindings
+- [`crates/shivya-telemetry`](https://crates.io/crates/shivya-telemetry) - WASM telemetry bindings and 5-layer browser orchestrator
 - [`crates/shivya-cli`](https://crates.io/crates/shivya-cli) - High-performance native background daemon & Tokyo-UDS CLI tool
 
 ---

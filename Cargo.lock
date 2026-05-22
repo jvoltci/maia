@@ -855,7 +855,7 @@ version = "0.4.0"
 
 [[package]]
 name = "shivya-mind"
-version = "0.4.0"
+version = "0.4.1"
 dependencies = [
  "bitvec",
  "blake3",
@@ -896,6 +896,7 @@ dependencies = [
  "getrandom",
  "shivya-flux",
  "shivya-hodge",
+ "shivya-mind",
  "shivya-morphic",
  "shivya-onsager",
  "shivya-turing",

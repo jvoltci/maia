@@ -1,6 +1,17 @@
 /* tslint:disable */
 /* eslint-disable */
 
+export class MindCore {
+    free(): void;
+    [Symbol.dispose](): void;
+    event_count_in_episode(): number;
+    events_ingested(): bigint;
+    constructor();
+    observe(subject: string, predicate: string, object: string): void;
+    self_similarity(subject: string, predicate: string, object: string): number;
+    signature_hex(): string;
+}
+
 export class ShivyaSimulation {
     free(): void;
     [Symbol.dispose](): void;
@@ -57,6 +68,20 @@ export interface InitOutput {
     readonly substrateorchestrator_reset: (a: number) => void;
     readonly substrateorchestrator_step: (a: number, b: number, c: number) => [number, number];
     readonly substrateorchestrator_trigger_apoptosis: (a: number, b: number) => number;
+    readonly __wbg_mindcore_free: (a: number, b: number) => void;
+    readonly mindcore_event_count_in_episode: (a: number) => number;
+    readonly mindcore_events_ingested: (a: number) => bigint;
+    readonly mindcore_new: () => number;
+    readonly mindcore_observe: (a: number, b: number, c: number, d: number, e: number, f: number, g: number) => void;
+    readonly mindcore_self_similarity: (a: number, b: number, c: number, d: number, e: number, f: number, g: number) => number;
+    readonly mindcore_signature_hex: (a: number) => [number, number];
+    readonly sm_codebook_free: (a: number) => void;
+    readonly sm_codebook_new: (a: number, b: number) => number;
+    readonly sm_hypervector_similarity: (a: number, b: number) => number;
+    readonly sm_memory_free: (a: number) => void;
+    readonly sm_memory_new: (a: number) => number;
+    readonly sm_memory_update: (a: number, b: number, c: number, d: number) => void;
+    readonly sm_memory_working_memory: (a: number, b: number) => void;
     readonly __wbindgen_externrefs: WebAssembly.Table;
     readonly __wbindgen_malloc: (a: number, b: number) => number;
     readonly __wbindgen_realloc: (a: number, b: number, c: number, d: number) => number;

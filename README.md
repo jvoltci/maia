@@ -7,7 +7,7 @@
 
 ![Shivya Architecture Hero Banner](docs/assets/hero.svg)
 
-Shivya is a bare-metal, zero-dependency Rust runtime for **load and state balancing across arrays of edge devices**. It is *not* a replacement for Paxos or Raft; it does not provide linearizable global ordering. What it does provide is:
+Shivya is a bare-metal, zero-dependency Rust runtime for **load and state balancing across arrays of edge devices**. In one line: a **consensus-free distributed edge-flow runtime** that performs **localized active-inference load balancing** and settles to **eventual curl-free convergence** over a simplicial state complex. It is *not* a replacement for Paxos or Raft; it does not provide linearizable global ordering. What it does provide is:
 
 1. **A curl-projection reconciler** (Hodge **curl projector** over a discrete simplicial state complex — specifically the coexact / `d₁ᵀβ` component is solved for and subtracted; the gradient and harmonic components are not separately extracted) that lets concurrent edge writes settle to a single curl-free state after partitions heal, without a consensus round.
 2. **A multi-agent active-inference loop** that diffuses load through symmetric Onsager couplings, so nodes redistribute work toward minima of a collective variational free-energy functional.
@@ -215,7 +215,7 @@ For an application-level integration that *doesn't* require knowing what a 1-cha
 
 The crates split cleanly into two tiers — *math* (zero-dependency, stack-allocated, WASM-native) and *runtime* (native binaries on top of Tokio):
 
-**Math + simulation tier — Layers 0-4 & Cognitive Memory. Zero external dependencies, stack-allocated where possible, build cleanly for `wasm32-unknown-unknown`. This is what powers the in-browser simulation cockpit (`docs/index.html`):**
+**Math + simulation tier — Layers 0-4 + Cognitive Core. Zero external dependencies, stack-allocated where possible, build cleanly for `wasm32-unknown-unknown`. This is what powers the in-browser simulation cockpit at [`docs/index.html`](docs/index.html) — including the live "Cognitive Core" panel that streams VSA working-memory signatures from `shivya-mind`:**
 
 - [`crates/shivya-hodge`](https://crates.io/crates/shivya-hodge) — Layer 0: simplicial DEC operators + curl projector
 - [`crates/shivya-flux`](https://crates.io/crates/shivya-flux) — Layer 1: variational free-energy agent

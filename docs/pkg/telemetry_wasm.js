@@ -1,5 +1,84 @@
 /* @ts-self-types="./telemetry_wasm.d.ts" */
 
+export class MindCore {
+    __destroy_into_raw() {
+        const ptr = this.__wbg_ptr;
+        this.__wbg_ptr = 0;
+        MindCoreFinalization.unregister(this);
+        return ptr;
+    }
+    free() {
+        const ptr = this.__destroy_into_raw();
+        wasm.__wbg_mindcore_free(ptr, 0);
+    }
+    /**
+     * @returns {number}
+     */
+    event_count_in_episode() {
+        const ret = wasm.mindcore_event_count_in_episode(this.__wbg_ptr);
+        return ret >>> 0;
+    }
+    /**
+     * @returns {bigint}
+     */
+    events_ingested() {
+        const ret = wasm.mindcore_events_ingested(this.__wbg_ptr);
+        return BigInt.asUintN(64, ret);
+    }
+    constructor() {
+        const ret = wasm.mindcore_new();
+        this.__wbg_ptr = ret;
+        MindCoreFinalization.register(this, this.__wbg_ptr, this);
+        return this;
+    }
+    /**
+     * @param {string} subject
+     * @param {string} predicate
+     * @param {string} object
+     */
+    observe(subject, predicate, object) {
+        const ptr0 = passStringToWasm0(subject, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len0 = WASM_VECTOR_LEN;
+        const ptr1 = passStringToWasm0(predicate, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len1 = WASM_VECTOR_LEN;
+        const ptr2 = passStringToWasm0(object, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len2 = WASM_VECTOR_LEN;
+        wasm.mindcore_observe(this.__wbg_ptr, ptr0, len0, ptr1, len1, ptr2, len2);
+    }
+    /**
+     * @param {string} subject
+     * @param {string} predicate
+     * @param {string} object
+     * @returns {number}
+     */
+    self_similarity(subject, predicate, object) {
+        const ptr0 = passStringToWasm0(subject, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len0 = WASM_VECTOR_LEN;
+        const ptr1 = passStringToWasm0(predicate, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len1 = WASM_VECTOR_LEN;
+        const ptr2 = passStringToWasm0(object, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len2 = WASM_VECTOR_LEN;
+        const ret = wasm.mindcore_self_similarity(this.__wbg_ptr, ptr0, len0, ptr1, len1, ptr2, len2);
+        return ret;
+    }
+    /**
+     * @returns {string}
+     */
+    signature_hex() {
+        let deferred1_0;
+        let deferred1_1;
+        try {
+            const ret = wasm.mindcore_signature_hex(this.__wbg_ptr);
+            deferred1_0 = ret[0];
+            deferred1_1 = ret[1];
+            return getStringFromWasm0(ret[0], ret[1]);
+        } finally {
+            wasm.__wbindgen_free(deferred1_0, deferred1_1, 1);
+        }
+    }
+}
+if (Symbol.dispose) MindCore.prototype[Symbol.dispose] = MindCore.prototype.free;
+
 export class ShivyaSimulation {
     __destroy_into_raw() {
         const ptr = this.__wbg_ptr;
@@ -231,6 +310,9 @@ function __wbg_get_imports() {
     };
 }
 
+const MindCoreFinalization = (typeof FinalizationRegistry === 'undefined')
+    ? { register: () => {}, unregister: () => {} }
+    : new FinalizationRegistry(ptr => wasm.__wbg_mindcore_free(ptr, 1));
 const ShivyaSimulationFinalization = (typeof FinalizationRegistry === 'undefined')
     ? { register: () => {}, unregister: () => {} }
     : new FinalizationRegistry(ptr => wasm.__wbg_shivyasimulation_free(ptr, 1));

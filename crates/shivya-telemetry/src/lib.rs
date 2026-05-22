@@ -31,6 +31,9 @@ use shivya_morphic::{DynamicGibbsAgent, Expr, MorphicHotSwapper, compile};
 use shivya_onsager::OnsagerCollectiveEnsemble;
 use shivya_turing::{MorphogenSystem, MitosisEngine, ApoptosisEngine};
 
+mod mind;
+use crate::mind::MindCore;
+
 // Keeps ShivyaSimulation backward-compatible for safety
 #[wasm_bindgen]
 pub struct ShivyaSimulation {
@@ -132,6 +135,7 @@ pub struct SubstrateOrchestrator {
     mitosis: MitosisEngine,
     apoptosis: ApoptosisEngine,
     step_count: usize,
+    mind: MindCore,
 }
 
 #[wasm_bindgen]
@@ -215,6 +219,7 @@ impl SubstrateOrchestrator {
             mitosis,
             apoptosis,
             step_count: 0,
+            mind: MindCore::new(),
         }
     }
 
@@ -280,6 +285,7 @@ impl SubstrateOrchestrator {
         self.swappers = swappers;
         self.turing = turing;
         self.step_count = 0;
+        self.mind = MindCore::new();
     }
 
     pub fn inject_stress(&mut self, node_id: usize) -> bool {
@@ -342,6 +348,18 @@ impl SubstrateOrchestrator {
 
         // Step Onsager Collective Ensemble (Layer 3 & 1)
         let collective_f = self.ensemble.step(&obs, 0.1, 10, 1e-4, 0.1);
+
+        // Cognitive core: bucket the collective free energy into a small
+        // categorical and feed it as a (collective, free_energy, bucket_b<k>)
+        // event. Eight buckets cover the dynamic range we see in the demo
+        // without inflating the codebook vocabulary every step.
+        let bucket = (collective_f.abs().min(8.0)).floor() as i32;
+        let bucket_label = format!("bucket_b{}", bucket);
+        self.mind.observe("collective", "free_energy", &bucket_label);
+        let mind_self_sim = self.mind.self_similarity("collective", "free_energy", &bucket_label);
+        let mind_events = self.mind.events_ingested();
+        let mind_in_episode = self.mind.event_count_in_episode();
+        let mind_signature = self.mind.signature_hex();
 
         // 4. Morphic Hot-swapping VM updates (Layer 2)
         for &i in &active_indices {
@@ -434,7 +452,11 @@ impl SubstrateOrchestrator {
         json.push_str(&format!("  \"curl_deviation\": {:.6},\n", curl_deviation));
         json.push_str(&format!("  \"step_count\": {},\n", self.step_count));
         json.push_str(&format!("  \"active_nodes_count\": {},\n", updated_active.len()));
-        
+        json.push_str(&format!("  \"mind_events_ingested\": {},\n", mind_events));
+        json.push_str(&format!("  \"mind_event_count_in_episode\": {},\n", mind_in_episode));
+        json.push_str(&format!("  \"mind_self_similarity\": {:.6},\n", mind_self_sim));
+        json.push_str(&format!("  \"mind_signature_hex\": \"{}\",\n", mind_signature));
+
         json.push_str("  \"active_pool\": [");
         let active_pool_str = updated_active.iter().map(|idx| idx.to_string()).collect::<Vec<String>>().join(", ");
         json.push_str(&active_pool_str);

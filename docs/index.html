@@ -891,6 +891,32 @@
                         </div>
                     </div>
 
+                    <!-- Cognitive Core -->
+                    <div class="console-panel glass-card" id="mind-panel">
+                        <div class="panel-header">
+                            <h2>Cognitive Core (shivya-mind)</h2>
+                            <span style="font-size: 0.75rem; color: var(--text-muted);">VSA Episodic Memory</span>
+                        </div>
+                        <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.5rem; margin-bottom: 0.5rem;">
+                            <div>
+                                <div style="font-size: 0.7rem; color: var(--text-muted);">Events Ingested</div>
+                                <div id="mind-events" style="font-size: 1.1rem; font-weight: 600;">0</div>
+                            </div>
+                            <div>
+                                <div style="font-size: 0.7rem; color: var(--text-muted);">Open Episode (events)</div>
+                                <div id="mind-in-episode" style="font-size: 1.1rem; font-weight: 600;">0</div>
+                            </div>
+                            <div>
+                                <div style="font-size: 0.7rem; color: var(--text-muted);">Self-similarity</div>
+                                <div id="mind-self-sim" style="font-size: 1.1rem; font-weight: 600;">0.000</div>
+                            </div>
+                            <div>
+                                <div style="font-size: 0.7rem; color: var(--text-muted);">Working-Memory Signature</div>
+                                <div id="mind-signature" style="font-family: ui-monospace, monospace; font-size: 0.85rem; letter-spacing: 0.05em;">0000000000000000</div>
+                            </div>
+                        </div>
+                    </div>
+
                     <!-- Telemetry Ticker -->
                     <div class="console-panel glass-card">
                         <div class="panel-header">
@@ -1611,7 +1637,15 @@
                 
                 state.curlHistory.shift();
                 state.curlHistory.push(data.curl_deviation);
-                
+
+                // Cognitive Core panel updates (shivya-mind)
+                if (typeof data.mind_events_ingested !== 'undefined') {
+                    document.getElementById('mind-events').textContent = data.mind_events_ingested;
+                    document.getElementById('mind-in-episode').textContent = data.mind_event_count_in_episode;
+                    document.getElementById('mind-self-sim').textContent = Number(data.mind_self_similarity).toFixed(3);
+                    document.getElementById('mind-signature').textContent = data.mind_signature_hex;
+                }
+
                 // Sync elements
                 physicsEdges = data.edges || [];
                 syncPhysicsNodes(data.active_pool, data.nodes);

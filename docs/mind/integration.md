@@ -232,3 +232,40 @@ When the engine is ported to Rust, the on-disk format is the
 synchronization contract. Native code reads and writes the same five
 files (`M.bin`, `D.bin`, `E.bin`, `predictor_h.bin`, `meta.json`) and
 the same SQLite `episodes.db`. No translation layer is necessary.
+
+---
+
+## 5. Substrate convergence benchmark (cross-reference)
+
+`shivya-mind` does not participate in the Hodge curl-projection that
+the substrate (Layers 0-4, `shivya-hodge`/`shivya-flux`) performs. The
+two systems sit on different planes: the cognitive memory is
+information-theoretic (`MAP-B` bipolar algebra over 10,000-D bit
+vectors), the substrate is topological (`d₀`/`d₁`/`d₁ᵀ` operators
+on a simplicial complex). They share the workspace and a few host
+processes; they do not share an algebra.
+
+For integrators sizing a deployment that uses both crates, the
+substrate's settlement cost is reported in the top-level
+[`README.md` — Convergence vs Pairwise Gossip Averaging](../../README.md#convergence-vs-pairwise-gossip-averaging)
+section. The summary, in one paragraph and with no editorial gloss:
+
+* **Single-source scalar diffusion (Fixture A).** Pairwise gossip
+  averaging beats Shivya on every cost axis (steps, wall clock,
+  bytes, allocations) by ~200× on wall clock and ~15× on bandwidth.
+  If the per-host workload your memory engine is observing reduces
+  to a single scalar (e.g. CPU load) diffusing from one hot host,
+  use gossip and do not invoke `reconcile_state_delta`.
+* **Multi-side concurrent oriented conflict (Fixture B).** Shivya
+  settles the curl in one projector pass (final curl `0.00`).
+  Gossip's pairwise scalar averaging integrates each clique's
+  oriented edge writes into a node-level summary and leaves a
+  persistent curl norm of `75.0` on the wire — it cannot represent
+  the rotational disagreement that the partition write history
+  produced. If your fleet has cycles that a partition can straddle
+  and concurrent oriented offload writes during the split,
+  `reconcile_state_delta` removes the curl `gossip` literally has
+  no machinery to detect.
+
+Mind handles cognitive state. The substrate handles topological
+flow. The benchmark above is purely a substrate measurement.

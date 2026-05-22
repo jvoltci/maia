@@ -140,9 +140,9 @@ impl VsaExpectednessPredictor {
     fn embed_into(&self, memory: &mut Memory, event: &Event, out: &mut [f32; D]) {
         let f = memory.encode_event(event);
         for i in 0..D {
-            let w = i / 64;
-            let bit_idx = i % 64;
-            let mask = 1u64 << (63 - bit_idx);
+            let w = i / 32;
+            let bit_idx = i % 32;
+            let mask = 1u32 << (31 - bit_idx);
             let sign = if f.data[w] & mask != 0 { -1.0 } else { 1.0 };
             out[i] = sign;
         }

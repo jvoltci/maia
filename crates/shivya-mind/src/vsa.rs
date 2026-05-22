@@ -7,10 +7,12 @@
 //! * `similarity` is `(D - 2 * popcount(a ^ b)) / D`,
 //! * `bundle` is bit-majority with deterministic tie-breaking.
 //!
-//! Storage is a `BitArray<[u64; WORDS], Msb0>` so the algebra rides
-//! directly on the CPU's word-level XOR and popcount paths. The trailing
-//! `WORDS * 64 - D = 48` padding bits are kept at zero so they do not
-//! perturb popcount-based similarity.
+//! Storage is a `BitArray<[u32; WORDS], Msb0>` so the algebra rides
+//! directly on the CPU's word-level XOR and popcount paths and the
+//! crate compiles cleanly for both 64-bit native and 32-bit `wasm32`
+//! targets (bitvec only implements `BitStore` for `u64` on 64-bit
+//! pointer widths). The trailing `WORDS * 32 - D = 16` padding bits
+//! are kept at zero so they do not perturb popcount-based similarity.
 
 use bitvec::array::BitArray;
 use bitvec::order::Msb0;
@@ -18,14 +20,14 @@ use bitvec::order::Msb0;
 /// Logical hypervector dimension.
 pub const D: usize = 10_000;
 
-/// Number of `u64` storage words: `ceil(D / 64) = 157`.
-pub const WORDS: usize = 157;
+/// Number of `u32` storage words: `ceil(D / 32) = 313`.
+pub const WORDS: usize = 313;
 
 /// Number of unused padding bits in the final storage word.
-pub const PADDING_BITS: usize = WORDS * 64 - D;
+pub const PADDING_BITS: usize = WORDS * 32 - D;
 
 /// Bit-packed hypervector. The MSB of word 0 is logical bit 0.
-pub type Hypervector = BitArray<[u64; WORDS], Msb0>;
+pub type Hypervector = BitArray<[u32; WORDS], Msb0>;
 
 /// Build a fresh zeroed hypervector.
 #[inline]
@@ -33,14 +35,14 @@ pub fn zero() -> Hypervector {
     BitArray::ZERO
 }
 
-/// Mask the final storage word so the trailing 48 padding bits are zero.
+/// Mask the final storage word so the trailing 16 padding bits are zero.
 #[inline]
 pub fn mask_padding(h: &mut Hypervector) {
     if PADDING_BITS == 0 {
         return;
     }
-    let keep = 64 - PADDING_BITS;
-    let mask: u64 = if keep == 0 { 0 } else { !0u64 << PADDING_BITS };
+    let keep = 32 - PADDING_BITS;
+    let mask: u32 = if keep == 0 { 0 } else { !0u32 << PADDING_BITS };
     h.data[WORDS - 1] &= mask;
 }
 
@@ -167,7 +169,7 @@ impl Pcg32 {
 pub fn random_hypervector(rng: &mut Pcg32) -> Hypervector {
     let mut out = zero();
     for w in 0..WORDS {
-        out.data[w] = rng.next_u64();
+        out.data[w] = rng.next_u32();
     }
     mask_padding(&mut out);
     out
@@ -194,10 +196,10 @@ pub fn bundle(vecs: &[&Hypervector], rng: &mut Pcg32) -> Hypervector {
     for v in vecs {
         for w in 0..WORDS {
             let word = v.data[w];
-            let base = w * 64;
-            let end = ((w + 1) * 64).min(D);
+            let base = w * 32;
+            let end = ((w + 1) * 32).min(D);
             for bit_idx in 0..(end - base) {
-                let mask = 1u64 << (63 - bit_idx);
+                let mask = 1u32 << (31 - bit_idx);
                 if word & mask != 0 {
                     counts[base + bit_idx] += 1;
                 }
@@ -216,9 +218,9 @@ pub fn bundle(vecs: &[&Hypervector], rng: &mut Pcg32) -> Hypervector {
             false
         };
         if bit_one {
-            let w = i / 64;
-            let bit_idx = i % 64;
-            out.data[w] |= 1u64 << (63 - bit_idx);
+            let w = i / 32;
+            let bit_idx = i % 32;
+            out.data[w] |= 1u32 << (31 - bit_idx);
         }
     }
     out
@@ -239,9 +241,9 @@ pub fn sign_with_tiebreak(tally: &[f32; D], rng: &mut Pcg32) -> Hypervector {
             (rng.next_u32() & 1) == 1
         };
         if bit_one {
-            let w = i / 64;
-            let bit_idx = i % 64;
-            out.data[w] |= 1u64 << (63 - bit_idx);
+            let w = i / 32;
+            let bit_idx = i % 32;
+            out.data[w] |= 1u32 << (31 - bit_idx);
         }
     }
     out
@@ -252,10 +254,10 @@ pub fn sign_with_tiebreak(tally: &[f32; D], rng: &mut Pcg32) -> Hypervector {
 pub fn accumulate_into(tally: &mut [f32; D], v: &Hypervector, weight: f32) {
     for w in 0..WORDS {
         let word = v.data[w];
-        let base = w * 64;
-        let end = ((w + 1) * 64).min(D);
+        let base = w * 32;
+        let end = ((w + 1) * 32).min(D);
         for bit_idx in 0..(end - base) {
-            let mask = 1u64 << (63 - bit_idx);
+            let mask = 1u32 << (31 - bit_idx);
             let sign = if word & mask != 0 { -1.0 } else { 1.0 };
             tally[base + bit_idx] += weight * sign;
         }
@@ -264,17 +266,17 @@ pub fn accumulate_into(tally: &mut [f32; D], v: &Hypervector, weight: f32) {
 
 #[inline]
 fn read_bit(v: &Hypervector, i: usize) -> bool {
-    let w = i / 64;
-    let bit_idx = i % 64;
-    let mask = 1u64 << (63 - bit_idx);
+    let w = i / 32;
+    let bit_idx = i % 32;
+    let mask = 1u32 << (31 - bit_idx);
     v.data[w] & mask != 0
 }
 
 #[inline]
 fn write_bit(v: &mut Hypervector, i: usize, bit_one: bool) {
-    let w = i / 64;
-    let bit_idx = i % 64;
-    let mask = 1u64 << (63 - bit_idx);
+    let w = i / 32;
+    let bit_idx = i % 32;
+    let mask = 1u32 << (31 - bit_idx);
     if bit_one {
         v.data[w] |= mask;
     } else {
@@ -327,7 +329,7 @@ mod tests {
         let mut rng = Pcg32::new(101, 103);
         let v = random_hypervector(&mut rng);
         let last = v.data[WORDS - 1];
-        let padding_mask = (1u64 << PADDING_BITS) - 1;
+        let padding_mask: u32 = (1u32 << PADDING_BITS) - 1;
         assert_eq!(last & padding_mask, 0);
     }
 

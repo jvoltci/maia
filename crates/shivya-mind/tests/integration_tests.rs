@@ -195,9 +195,9 @@ fn project(tally: &[f32], v: &Hypervector) -> f32 {
     debug_assert_eq!(tally.len(), vsa::D);
     let mut acc = 0.0f32;
     for i in 0..vsa::D {
-        let w = i / 64;
-        let bit_idx = i % 64;
-        let mask = 1u64 << (63 - bit_idx);
+        let w = i / 32;
+        let bit_idx = i % 32;
+        let mask = 1u32 << (31 - bit_idx);
         let sign = if v.data[w] & mask != 0 { -1.0 } else { 1.0 };
         acc += tally[i] * sign;
     }

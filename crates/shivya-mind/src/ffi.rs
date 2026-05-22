@@ -195,16 +195,16 @@ fn cstr_str<'a>(p: *const c_char) -> Option<&'a str> {
 }
 
 /// Big-endian serialise the first `D` bits of `hv` into `out` (length
-/// `PACKED_LEN`). The trailing `WORDS * 64 - D = 48` padding bits of
-/// word 156 are dropped on the floor; only its top 16 bits land in the
-/// output as the final two bytes.
+/// `PACKED_LEN`). With `u32` storage the trailing 16 padding bits of
+/// the last word are dropped on the floor; only the top 16 bits of
+/// word 312 land in the output as the final two bytes.
 fn pack_hypervector(hv: &crate::vsa::Hypervector, out: &mut [u8]) {
     debug_assert_eq!(out.len(), PACKED_LEN);
     let mut cursor = 0usize;
     for w in 0..WORDS {
         let be = hv.data[w].to_be_bytes();
         let remaining = PACKED_LEN - cursor;
-        let take = remaining.min(8);
+        let take = remaining.min(be.len());
         out[cursor..cursor + take].copy_from_slice(&be[..take]);
         cursor += take;
         if cursor == PACKED_LEN {

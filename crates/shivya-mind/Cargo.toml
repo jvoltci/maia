@@ -1,6 +1,6 @@
 [package]
 name = "shivya-mind"
-version = "0.4.0"
+version = "0.4.1"
 edition = "2021"
 license = "MIT OR Apache-2.0"
 description = "Bit-packed VSA (MAP-B) memory engine with power-law decay and surprise-driven episodic segmentation."

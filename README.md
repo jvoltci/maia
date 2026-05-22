@@ -128,7 +128,7 @@ Use Shivya when "eventually identical edge-flow state" is acceptable and you car
 
 ## Performance Envelope
 
-Numbers below are from the workspace's own tests on a single laptop (Apple M-class, macOS). Take them as **order-of-magnitude indicators**, not benchmarks — there is no comparison to Raft/gossip yet.
+Numbers below are from the workspace's own tests on a single laptop (Apple M-class, macOS). Take them as **order-of-magnitude indicators**, not benchmarks.
 
 | Operation | Cost / scale |
 |---|---|
@@ -144,6 +144,42 @@ Convergence behaviour:
 - **Curl projector**: idempotent. After one pass the residual `‖d₁ · S_reconciled‖` is below the CG tolerance (1e-8 by default).
 - **Belief update (gradient descent on μ_q)**: monotonic on smooth observations; converges in ≤ 10 iterations to a 1e-4 gradient norm in the test cases.
 - **Onsager ensemble F**: in the chaos test (7 nodes, 15% drop, hard partition, ~80 steps), the COOLDOWN-phase trailing-10 average (sampled after every block is cleared and a fresh full-mesh discovery has restored N-1 peer visibility) beats the WARMUP-phase leading-10 average — i.e. F stabilises below its pre-chaos baseline immediately after recovery. Step-by-step monotonic descent during the chaos window itself is *not* asserted; F may transiently rise while partitions are active.
+
+---
+
+## Convergence vs Pairwise Gossip Averaging
+
+This section reports head-to-head numbers from `crates/shivya-flux/benches/convergence_vs_gossip.rs` (run with `cargo bench -p shivya-flux --bench convergence_vs_gossip`). The fixture is a 7-node bowtie-plus-tail complex (8 edges, 2 triangles). Gossip is the standard randomised-pairwise-averaging primitive from Boyd et al. 2006, seeded deterministically, sharing the same allocator, same convergence tolerance (`EPS = 1e-3`), same topology. The two algorithms see identical input state per fixture.
+
+There are two fixtures, and **they tell opposite stories on purpose**.
+
+### Fixture A — single-source scalar spike (pure-gradient regime)
+
+`V0 += 50` over a baseline `BASE_LOAD = 100`. The merged disagreement is a pure-gradient field on the node potentials: there is no rotational component for any algorithm to project out.
+
+| Algorithm | Steps | Wall (µs) | Bytes exchanged | Heap allocs | Heap bytes | Final L∞ | Final curl |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| Shivya (flux + hodge) | 881 | 1067 | 112768 | 20038 | 1081920 | 0.00e0 | 0.00e0 |
+| Gossip (pairwise avg) | 471 | 5 | 7536 | 0 | 0 | 7.49e-4 | 0.00e0 |
+
+**Honest reading: pairwise gossip wins this fixture on every cost axis.** ~1.9× fewer steps, ~200× lower wall clock, ~15× less bandwidth, zero allocations vs ~1 MB. Both reach effectively the same final state quality. Shivya is doing work it does not need to do here — the input flow has no curl, and the projector is solving a Laplacian system whose right-hand side is identically zero. If your workload is a scalar quantity diffusing across a graph from a single source, gossip is the right tool. There is no need to retire pairwise averaging just because Shivya exists.
+
+### Fixture B — multi-side concurrent boundary conflict (rotational regime)
+
+Two opposing partition cliques (`L = {V0, V1}`, `R = {V3, V4}`) concurrently write oriented edge flux around the closing edges of each bowtie triangle (`|δ| = 25` per edge). The merged 1-chain is not the gradient of any single scalar field; per the Hodge decomposition, it carries a non-trivial coexact (curl) component on each of the two triangles. This is the regime Shivya was designed for.
+
+| Algorithm | Steps | Wall (µs) | Bytes exchanged | Heap allocs | Heap bytes | Final L∞ | Final curl |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| Shivya (curl projector) | 1 | 1 | 128 | 22 | 1168 | 0.00e0 | 0.00e0 |
+| Gossip (pairwise avg) | 1 | 0 | 144 | 0 | 0 | 0.00e0 | **7.50e+1** |
+
+**Honest reading: on the rotational regime, gossip cannot see the disagreement it has just integrated.** Both algorithms drive their *scalar* node-potential view to the global mean. The decisive difference is the persistent curl on the edge-flow field that gossip leaves behind: `‖d₁ · f‖∞ = 75.0`. Pairwise scalar averaging has no representation of oriented rotational flow; it integrates each clique's edge writes into a node-level summary and then forgets that the edges ever disagreed. Shivya's Hodge projector recognises the curl and removes it in a single pass (no iteration; the projector is idempotent).
+
+### Where each regime occurs in practice
+
+The two fixtures are not equally common in real edge fleets. Single-source scalar diffusion is the everyday case (one hot node, the rest absorb its slack) and is where most published load-balancers operate; gossip handles it well. Multi-side concurrent oriented conflict is the *partition-recovery* case: two halves of a fleet independently route load while disconnected, and on heal the merged edge-flow chain has rotational disagreement around any cycle the partition straddled. Curl-projection turns this from an off-by-some-percent steady-state error into an exact cancellation in one step.
+
+If your workload never spans a partition that closes a cycle, you do not need Shivya — pick gossip. If it does, Shivya gives you a primitive gossip cannot construct.
 
 ---
 
